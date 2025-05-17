@@ -1,6 +1,8 @@
 import { BackgroundLines } from "@/components/ui/background-lines";
 import Navbar from "./_component/navbar";
 import TextInputContainer from "./_component/text-input-container";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 export default function Home() {
   return (
