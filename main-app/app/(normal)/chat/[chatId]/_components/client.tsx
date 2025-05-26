@@ -5,12 +5,13 @@ import React from "react";
 import axios from "axios";
 type Props = {
   chatId: string;
+  spaceExists: boolean;
 };
 
-export default function ChatPage({ chatId }: Props) {
+export default function ChatPage({ chatId, spaceExists }: Props) {
   const [text, setText] = React.useState("");
   const [chatSpaceInfo, setChatSpaceInfo] = React.useState<any>(null);
-  const [messages, setMessages] = React.useState<any[]>([]);
+  const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const { data: session } = authClient.useSession();
   const router = useRouter();
   if (!session || !session.user) {
@@ -78,7 +79,7 @@ export default function ChatPage({ chatId }: Props) {
     return userData.lastSearchedFor.text;
   };
 
-  const getTextResponse = async (message: string) => {
+  const getTextResponseForNewSpace = async (message: string) => {
     const res = await axios.post(`/api/chat/`, {
       message: message,
       chatId: chatId,
@@ -89,18 +90,37 @@ export default function ChatPage({ chatId }: Props) {
       return;
     }
 
-    const text = res.data.text;
-    console.log("text", text);
-    setText(text);
+    return res.data.response as string;
+  };
+
+  const getChatHistory = async () => {
+    const res = await axios.get(`/api/chat/${chatId}`);
+
+    if (res.status !== 200) {
+      console.log("error", res);
+      router.push("/");
+      return;
+    }
+
+    setMessages(res.data.messages);
   };
 
   const init = async () => {
-    const chatSpaceExists = await getChatSpaceIfExists();
-    if (!chatSpaceExists) {
+    if (!spaceExists) {
       console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
-      await getTextResponse(message);
-      return;
+      const response = await getTextResponseForNewSpace(message);
+      if (!response) {
+        console.log("no response");
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", body: message },
+        { role: "assistant", body: response },
+      ]);
+    } else {
+      getChatHistory();
     }
   };
   React.useEffect(() => {

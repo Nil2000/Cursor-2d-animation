@@ -1,6 +1,4 @@
 import { db } from "@/lib/db";
-import { chat_space, chat_video } from "@/lib/schema";
-import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -14,32 +12,22 @@ export async function GET(
   }
 
   try {
-    const chatSpace = await db.query.chat_space.findFirst({
-      where: eq(chat_space.id, chatSpaceId),
+    const messages = await db.query.chat.findMany({
+      where: (chat, { eq }) => eq(chat.chatSpaceId, chatSpaceId),
       with: {
-        chats: {
-          with: {
-            chat_video: true,
-          },
-        },
+        chat_videos: true,
       },
+      orderBy: (chat, { desc }) => desc(chat.createdAt),
     });
-
-    if (!chatSpace) {
-      return NextResponse.json(
-        { error: "Chat space not found" },
-        { status: 200 }
-      );
-    }
 
     return NextResponse.json(
       {
-        spaceInfo: chatSpace,
+        messages: messages,
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching chat space", error);
+    console.error("Error fetching messages", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
