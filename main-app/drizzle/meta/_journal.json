@@ -15,6 +15,13 @@
       "when": 1747136280380,
       "tag": "0001_for-better-auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747548441017,
+      "tag": "0002_chat-intro",
+      "breakpoints": true
     }
   ]
 }

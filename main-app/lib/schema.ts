@@ -1,9 +1,13 @@
+import { createId } from "@paralleldrive/cuid2";
+import { array } from "better-auth";
+import { relations } from "drizzle-orm";
 import {
   pgTable,
   text,
   timestamp,
   boolean,
   integer,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -55,3 +59,59 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+// Chat related tables
+export const chatType = pgEnum("type", ["user", "assistant"]);
+
+export const chat_space = pgTable("chat_space", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+export const chat = pgTable("chat", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  type: chatType(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  contextId: text("context_id").default(""),
+  chatSpaceId: text("chat_space_id")
+    .notNull()
+    .references(() => chat_space.id, { onDelete: "cascade" }),
+});
+export const chat_space_chats_relation = relations(chat_space, ({ many }) => ({
+  chats: many(chat),
+}));
+export const chats_chat_space_relation = relations(chat, ({ one }) => ({
+  chatSpace: one(chat_space, {
+    fields: [chat.chatSpaceId],
+    references: [chat_space.id],
+  }),
+}));
+export const chat_video = pgTable("chat_video", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  chatId: text("chat_id")
+    .notNull()
+    .references(() => chat.id, { onDelete: "cascade" }),
+});
+export const chat_chat_videos_relation = relations(chat, ({ many }) => ({
+  chat_videos: many(chat_video),
+}));
+export const chat_video_chat_relation = relations(chat_video, ({ one }) => ({
+  chat: one(chat, {
+    fields: [chat_video.chatId],
+    references: [chat.id],
+  }),
+}));
