@@ -1,5 +1,4 @@
 import React from "react";
-import ChatPage from "./_components/client";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { fetchChatSpaceIfExists } from "@/actions/chatActions";

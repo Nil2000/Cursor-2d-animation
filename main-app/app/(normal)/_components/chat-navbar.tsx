@@ -6,12 +6,12 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import React from "react";
 
 export default function ChatNavbar() {
-  const { open, setOpen } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
   return (
     <nav className="h-16 flex items-center justify-between p-4 w-full">
       <div>
         <Button
-          onClick={() => setOpen(!open)}
+          onClick={() => toggleSidebar()}
           variant="outline"
           className="h-9 w-9"
         >

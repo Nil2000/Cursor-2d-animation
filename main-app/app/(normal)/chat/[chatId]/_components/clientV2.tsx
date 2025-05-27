@@ -3,6 +3,9 @@ import { authClient } from "@/lib/auth-client";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import React from "react";
+import UserBubble from "./user-bubble";
+import AssistantBubble from "./assistant-bubble";
+import { Loader } from "lucide-react";
 
 type Props = {
   chatId: string;
@@ -12,6 +15,7 @@ type Props = {
 
 export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(true);
   const router = useRouter();
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -61,7 +65,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   };
 
   const init = async () => {
-    console.log("init", chatId, spaceExists);
+    console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
       console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
@@ -82,16 +86,31 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   };
   React.useEffect(() => {
     init();
+    setLoading(false);
   }, [chatId, spaceExists]);
-  return (
-    <div>
-      clientV2
+
+  if (loading) {
+    return (
       <div>
+        <Loader className="w-10 h-10 mx-auto animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full lg:w-[1000px] mx-auto p-4">
+      <div className="flex flex-col gap-4">
         {messages.length > 0 &&
           messages.map((message, index) => (
             <div key={index}>
-              <strong>{message.type}:</strong>
-              <br /> {JSON.stringify(message.body)}
+              {message.type === "user" ? (
+                <UserBubble
+                  messageBody={message.body}
+                  imgUrl={userInfo.image}
+                />
+              ) : (
+                <AssistantBubble messageBody={message.body} />
+              )}
             </div>
           ))}
       </div>
