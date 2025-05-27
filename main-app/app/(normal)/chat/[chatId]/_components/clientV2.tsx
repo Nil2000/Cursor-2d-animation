@@ -1,50 +1,20 @@
 "use client";
 import { authClient } from "@/lib/auth-client";
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import React from "react";
-import axios from "axios";
+
 type Props = {
   chatId: string;
   spaceExists: boolean;
+  userInfo: UserInfoType;
 };
 
-export default function ChatPage({ chatId, spaceExists }: Props) {
+export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
-  const { data: session } = authClient.useSession();
   const router = useRouter();
-  if (!session || !session.user) {
-    return null;
-  }
-
-  const userId = session.user.id;
-
-  // const getStreamResponse = async () => {
-  //   const res=await axios.post(`/api/chat/${chatId}`, {
-  //     message: "hello",
-  //   }, {
-  //     responseType: "stream",
-  //   });
-
-  //   if (res.status !== 200) {
-  //     console.log("error", res);
-  //     return;
-  //   }
-
-  //   const reader = res.data.getReader();
-  //   const decoder = new TextDecoder("utf-8");
-  //   let done = false;
-  //   while (!done) {
-  //     const { done: doneReading, value } = await reader.read();
-  //     done = doneReading;
-  //     const text = decoder.decode(value, { stream: !done });
-  //     console.log("text", text);
-
-  //     setText((prev) => prev + text);
-  //   }
-  // }
-
   const getLastMessageFromLocalStorage = () => {
-    const key = `user/${userId}`;
+    const key = `user/${userInfo.id}`;
     const localStorageData = localStorage.getItem(key);
     if (!localStorageData) {
       console.log("no data");
@@ -94,37 +64,37 @@ export default function ChatPage({ chatId, spaceExists }: Props) {
     console.log("init", chatId, spaceExists);
     if (!spaceExists) {
       console.log("no chat space");
-      // const message = getLastMessageFromLocalStorage();
-      // const response = await getTextResponseForNewSpace(message);
-      // if (!response) {
-      //   console.log("no response");
-      //   return;
-      // }
-      // setMessages((prev) => [
-      //   ...prev,
-      //   { role: "user", body: message },
-      //   { role: "assistant", body: response },
-      // ]);
+      const message = getLastMessageFromLocalStorage();
+      const response = await getTextResponseForNewSpace(message);
+      if (!response) {
+        console.log("no response");
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        { type: "user", body: message },
+        { type: "assistant", body: response },
+      ]);
       return;
     }
     console.log("chat space exists");
-    // getChatHistory();
+    getChatHistory();
   };
   React.useEffect(() => {
     init();
   }, [chatId, spaceExists]);
   return (
     <div>
-      client: {chatId}
-      {messages.length > 0 && (
-        <div>
-          {messages.map((message, index) => (
+      clientV2
+      <div>
+        {messages.length > 0 &&
+          messages.map((message, index) => (
             <div key={index}>
-              <strong>{message.role}:</strong> {message.body}
+              <strong>{message.type}:</strong>
+              <br /> {JSON.stringify(message.body)}
             </div>
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

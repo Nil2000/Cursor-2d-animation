@@ -25,10 +25,13 @@ export async function POST(req: NextRequest) {
       message,
     });
 
+    console.log("Text response from chat completions:", textResponse);
+
     const newChat = await addChatToSpace(
       newChatSpace[0].id,
       "assistant",
-      textResponse.text
+      textResponse.text,
+      textResponse.contextId
     );
 
     return NextResponse.json(

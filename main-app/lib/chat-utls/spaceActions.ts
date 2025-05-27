@@ -32,7 +32,8 @@ export const createChatSpace = async (chatId: string) => {
 export const addChatToSpace = async (
   chatSpaceId: string,
   messageType: "user" | "assistant",
-  messageBody: string
+  messageBody: string,
+  contextId?: string
 ) => {
   try {
     const newChat = await db
@@ -43,6 +44,7 @@ export const addChatToSpace = async (
         chatSpaceId,
         body: messageBody,
         type: messageType,
+        contextId: contextId || null,
       })
       .returning();
     return newChat[0];

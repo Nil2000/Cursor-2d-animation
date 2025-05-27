@@ -17,7 +17,7 @@ export async function GET(
       with: {
         chat_videos: true,
       },
-      orderBy: (chat, { desc }) => desc(chat.createdAt),
+      orderBy: (chat, { asc }) => asc(chat.createdAt),
     });
 
     return NextResponse.json(
