@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
+import { Loader } from "lucide-react";
 
 type Props = {
   chatId: string;
@@ -14,6 +15,7 @@ type Props = {
 
 export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(true);
   const router = useRouter();
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -84,7 +86,17 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   };
   React.useEffect(() => {
     init();
+    setLoading(false);
   }, [chatId, spaceExists]);
+
+  if (loading) {
+    return (
+      <div>
+        <Loader className="w-10 h-10 mx-auto animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full lg:w-[1000px] mx-auto p-4">
       <div className="flex flex-col gap-4">

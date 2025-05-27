@@ -3,8 +3,8 @@ import React from "react";
 
 export default function MachineLogo() {
   return (
-    <div className="rounded-md h-9 w-9 bg-zinc-700 flex items-center justify-center">
-      <BrainCircuit />
+    <div className="rounded-md bg-zinc-700 flex items-center justify-center p-2">
+      <BrainCircuit size={16} />
     </div>
   );
 }

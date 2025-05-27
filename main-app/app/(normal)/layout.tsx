@@ -8,7 +8,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <ChatSidebar />
-      <main className="flex flex-col w-full min-h-screen">
+      <main className="flex flex-col w-screen min-h-screen">
         <ChatNavbar />
         {children}
       </main>
