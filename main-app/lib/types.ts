@@ -1,6 +1,7 @@
 type ClientMessageType = {
   type: "user" | "assistant";
   body: string;
+  contextId?: string | null;
 };
 
 type UserInfoType = {

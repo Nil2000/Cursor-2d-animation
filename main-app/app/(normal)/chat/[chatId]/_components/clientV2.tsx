@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
-import { Loader } from "lucide-react";
+import { Loader, Send } from "lucide-react";
+import TextComponent from "@/components/text-component";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   chatId: string;
@@ -15,7 +17,9 @@ type Props = {
 
 export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
+  const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [inputText, setInputText] = React.useState<string>("");
   const router = useRouter();
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -47,7 +51,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       return;
     }
 
-    return res.data.response as string;
+    return {
+      response: res.data.response,
+      contextId: res.data.contextId || null,
+    };
   };
 
   const getChatHistory = async () => {
@@ -64,20 +71,62 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     setMessages(res.data.messages);
   };
 
+  const handleSendMessage = async () => {
+    if (!inputText || inputText.trim().length === 0) {
+      return;
+    }
+    const contextId = messages[messages.length - 1]?.contextId || null;
+    setLoading(true);
+    const newMessage: ClientMessageType = {
+      type: "user",
+      body: inputText,
+      contextId: null,
+    };
+    setMessages((prev) => [...prev, newMessage]);
+    setInputText("");
+
+    try {
+      const res = await axios.post(`/api/chat/${chatId}`, {
+        message: inputText,
+        contextId: contextId,
+      });
+
+      if (res.status !== 200) {
+        console.log("error", res);
+        return;
+      }
+
+      const responseMessage: ClientMessageType = {
+        type: "assistant",
+        body: res.data.response,
+        contextId: res.data.contextId || null,
+      };
+      setMessages((prev) => [...prev, responseMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const init = async () => {
     console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
       console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
-      const response = await getTextResponseForNewSpace(message);
-      if (!response) {
+      const textResponse = await getTextResponseForNewSpace(message);
+      if (!textResponse) {
         console.log("no response");
         return;
       }
       setMessages((prev) => [
         ...prev,
         { type: "user", body: message },
-        { type: "assistant", body: response },
+        {
+          type: "assistant",
+          body: textResponse?.response,
+          contextId: textResponse?.contextId || null,
+        },
       ]);
       return;
     }
@@ -86,10 +135,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   };
   React.useEffect(() => {
     init();
-    setLoading(false);
+    setSpaceLoading(false);
   }, [chatId, spaceExists]);
 
-  if (loading) {
+  if (spaceLoading) {
     return (
       <div>
         <Loader className="w-10 h-10 mx-auto animate-spin text-gray-500" />
@@ -98,8 +147,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   }
 
   return (
-    <div className="w-full lg:w-[1000px] mx-auto p-4">
-      <div className="flex flex-col gap-4">
+    <div className="w-full lg:w-[1000px] mx-auto relative h-full">
+      <div className="flex flex-col gap-4 p-4">
         {messages.length > 0 &&
           messages.map((message, index) => (
             <div key={index}>
@@ -113,6 +162,29 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
               )}
             </div>
           ))}
+      </div>
+      <div className="absolute bottom-0 flex justify-center w-full p-4 gap-4">
+        <div className="w-full bg-accent rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
+          <TextComponent
+            onChange={(value: string) => setInputText(value)}
+            value={inputText}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          <div className="flex justify-end">
+            <Button
+              className="rounded-lg h-9 w-9"
+              onClick={handleSendMessage}
+              disabled={!inputText || loading}
+            >
+              <Send size={18} />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
