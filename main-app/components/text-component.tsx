@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 type Props = {
   value: string;
   onChange: (value: string) => void;
-  onKeyDown: (e: React.KeyboardEvent) => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
 };
 
 export default function TextComponent({ value, onChange, onKeyDown }: Props) {

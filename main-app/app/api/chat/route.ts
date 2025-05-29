@@ -4,18 +4,12 @@ import { streamTextForChat } from "@/lib/chat-utls/streamText";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { chatId, message } = await req.json();
+  const { chatId, message, contextId } = await req.json();
 
   if (!chatId || !message) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // const { textStream, providerMetadata } = streamTextForChat({
-  //   message,
-  //   previousContextId: chatId,
-  // });
-
-  // return new NextResponse(textStream);
   try {
     const newChatSpace = await createChatSpace(chatId);
 
@@ -23,11 +17,12 @@ export async function POST(req: NextRequest) {
 
     const textResponse = await generateChatCompletions({
       message,
+      previousContextId: contextId || undefined,
     });
 
     console.log("Text response from chat completions:", textResponse);
 
-    const newChat = await addChatToSpace(
+    await addChatToSpace(
       newChatSpace[0].id,
       "assistant",
       textResponse.text,
@@ -35,7 +30,7 @@ export async function POST(req: NextRequest) {
     );
 
     return NextResponse.json(
-      { response: newChat, contextId: textResponse.contextId },
+      { response: textResponse.text, contextId: textResponse.contextId },
       { status: 200 }
     );
   } catch (error) {
