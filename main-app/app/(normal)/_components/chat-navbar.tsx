@@ -8,19 +8,15 @@ import React from "react";
 export default function ChatNavbar() {
   const { open, toggleSidebar } = useSidebar();
   return (
-    <nav className="h-16 flex items-center justify-between p-4 w-full">
-      <div>
-        <Button
-          onClick={() => toggleSidebar()}
-          variant="outline"
-          className="h-9 w-9"
-        >
-          {open ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-        </Button>
-      </div>
-      <div>
-        <ThemeButton />
-      </div>
+    <nav className="h-16 flex items-center justify-between p-4 w-full top-0 fixed bg-transparent z-10 backdrop-blur-md">
+      <Button
+        onClick={() => toggleSidebar()}
+        variant="outline"
+        className="h-9 w-9"
+      >
+        {open ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+      </Button>
+      <ThemeButton />
     </nav>
   );
 }

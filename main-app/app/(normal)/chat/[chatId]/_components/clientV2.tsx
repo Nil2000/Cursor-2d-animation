@@ -147,8 +147,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   }
 
   return (
-    <div className="w-full lg:w-[1000px] mx-auto relative h-full">
-      <div className="flex flex-col gap-4 p-4">
+    <div className="w-full mb-24 mt-16">
+      <div className="flex flex-col gap-4 w-full lg:max-w-[1000px] mx-auto p-4">
         {messages.length > 0 &&
           messages.map((message, index) => (
             <div key={index}>
