@@ -8,6 +8,7 @@ import AssistantBubble from "./assistant-bubble";
 import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
+import { SyncLoader } from "react-spinners";
 
 type Props = {
   chatId: string;
@@ -20,6 +21,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [inputText, setInputText] = React.useState<string>("");
+  const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -82,7 +84,13 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       body: inputText,
       contextId: null,
     };
-    setMessages((prev) => [...prev, newMessage]);
+    const responseMessage: ClientMessageType = {
+      type: "assistant",
+      body: "",
+      contextId: null,
+      loading: true,
+    };
+    setMessages((prev) => [...prev, newMessage, responseMessage]);
     setInputText("");
 
     try {
@@ -93,15 +101,26 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
       if (res.status !== 200) {
         console.log("error", res);
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          {
+            ...responseMessage,
+            error: "Error sending message. Please try again.",
+            loading: false,
+          },
+        ]);
         return;
       }
-
-      const responseMessage: ClientMessageType = {
-        type: "assistant",
-        body: res.data.response,
-        contextId: res.data.contextId || null,
-      };
-      setMessages((prev) => [...prev, responseMessage]);
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        {
+          ...responseMessage,
+          body: res.data.response,
+          contextId: res.data.contextId || null,
+          loading: false,
+        },
+      ]);
+      scrollToBottom();
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
@@ -111,6 +130,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
   const init = async () => {
     console.log("init", chatId, spaceExists, userInfo);
+    setSpaceLoading(true);
     if (!spaceExists) {
       console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
@@ -128,27 +148,39 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           contextId: textResponse?.contextId || null,
         },
       ]);
+      setSpaceLoading(false);
       return;
     }
     console.log("chat space exists");
     getChatHistory();
+    setSpaceLoading(false);
   };
+
+  const scrollToBottom = () => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop =
+        messageContainerRef.current.scrollHeight;
+    }
+  };
+
   React.useEffect(() => {
     init();
-    setSpaceLoading(false);
   }, [chatId, spaceExists]);
 
   if (spaceLoading) {
     return (
-      <div>
-        <Loader className="w-10 h-10 mx-auto animate-spin text-gray-500" />
+      <div className="mt-20">
+        <Loader className="w-10 h-10 mx-auto animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="w-full mb-24 mt-16">
-      <div className="flex flex-col gap-4 w-full lg:max-w-[1000px] mx-auto p-4">
+    <div className="w-full mt-16 relative">
+      <div
+        className="flex flex-col gap-4 w-full lg:max-w-[1000px] mx-auto p-4 overflow-y-auto h-[calc(100vh-11rem)] pb-2 scroll-smooth"
+        ref={messageContainerRef}
+      >
         {messages.length > 0 &&
           messages.map((message, index) => (
             <div key={index}>
@@ -158,12 +190,16 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                   imgUrl={userInfo.image}
                 />
               ) : (
-                <AssistantBubble messageBody={message.body} />
+                <AssistantBubble
+                  messageBody={message.body}
+                  error={message.error}
+                  loading={message.loading}
+                />
               )}
             </div>
           ))}
       </div>
-      <div className="absolute bottom-0 flex justify-center w-full p-4 gap-4">
+      <div className="fixed bottom-0 flex justify-center w-full p-4 px-6 gap-4">
         <div className="w-full bg-accent rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
           <TextComponent
             onChange={(value: string) => setInputText(value)}

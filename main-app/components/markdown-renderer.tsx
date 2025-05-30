@@ -60,7 +60,7 @@ export default function MarkedownRendered({ content }: Props) {
               {...props}
               className={
                 className +
-                " rounded-md font-mono w-full bg-gray-100 dark:bg-gray-800 p-2 text-sm"
+                " rounded-md font-mono w-full bg-zinc-100 dark:bg-zinc-800 p-2 text-sm"
               }
             >
               {children}
