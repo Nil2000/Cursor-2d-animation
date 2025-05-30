@@ -167,6 +167,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     init();
   }, [chatId, spaceExists]);
 
+  React.useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   if (spaceLoading) {
     return (
       <div className="mt-20">
