@@ -6,11 +6,17 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  ref: React.Ref<HTMLDivElement>;
 };
 
-export default function TextComponent({ value, onChange, onKeyDown }: Props) {
+export default function TextComponent({
+  value,
+  onChange,
+  onKeyDown,
+  ref,
+}: Props) {
   return (
-    <div className="*:not-first:mt-2">
+    <div className="*:not-first:mt-2" ref={ref}>
       <Textarea
         id="first_text"
         placeholder="Write something..."
