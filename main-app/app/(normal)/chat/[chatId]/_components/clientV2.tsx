@@ -22,6 +22,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [loading, setLoading] = React.useState<boolean>(false);
   const [inputText, setInputText] = React.useState<string>("");
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
+  const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -180,31 +181,33 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   }
 
   return (
-    <div className="w-full mt-16 relative">
-      <div
-        className="flex flex-col gap-4 w-full lg:max-w-[1000px] mx-auto p-4 overflow-y-auto h-[calc(100vh-11rem)] pb-2 scroll-smooth"
-        ref={messageContainerRef}
-      >
-        {messages.length > 0 &&
-          messages.map((message, index) => (
-            <div key={index}>
-              {message.type === "user" ? (
-                <UserBubble
-                  messageBody={message.body}
-                  imgUrl={userInfo.image}
-                />
-              ) : (
-                <AssistantBubble
-                  messageBody={message.body}
-                  error={message.error}
-                  loading={message.loading}
-                />
-              )}
-            </div>
-          ))}
+    <>
+      <div className="w-full mt-16 relative overflow-y-auto">
+        <div
+          className="flex flex-col gap-4 w-full lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-12rem)] scroll-smooth items-center"
+          ref={messageContainerRef}
+        >
+          {messages.length > 0 &&
+            messages.map((message, index) => (
+              <div key={index} className="w-full">
+                {message.type === "user" ? (
+                  <UserBubble
+                    messageBody={message.body}
+                    imgUrl={userInfo.image}
+                  />
+                ) : (
+                  <AssistantBubble
+                    messageBody={message.body}
+                    error={message.error}
+                    loading={message.loading}
+                  />
+                )}
+              </div>
+            ))}
+        </div>
       </div>
-      <div className="fixed bottom-0 flex justify-center w-full p-4 px-6 gap-4">
-        <div className="w-full bg-accent rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
+      <div className="absolute bottom-0 flex justify-center w-full p-4 px-6 mr-2 gap-4 z-10">
+        <div className="w-full lg:max-w-[1000px] bg-accent rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
           <TextComponent
             onChange={(value: string) => setInputText(value)}
             value={inputText}
@@ -214,6 +217,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                 handleSendMessage();
               }
             }}
+            ref={inputContainerRef}
           />
           <div className="flex justify-end">
             <Button
@@ -226,6 +230,6 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -15,7 +15,7 @@ export default async function Layout({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <ChatSidebar />
-      <main className="flex flex-col w-full min-h-screen overflow-hidden">
+      <main className="flex flex-col w-full min-h-screen overflow-hidden relative flex-1">
         <ChatNavbar />
         {children}
       </main>
