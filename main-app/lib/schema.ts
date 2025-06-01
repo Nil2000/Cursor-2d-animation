@@ -9,6 +9,7 @@ import {
   integer,
   pgEnum,
 } from "drizzle-orm/pg-core";
+import { encode } from "punycode";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -62,7 +63,11 @@ export const verification = pgTable("verification", {
 
 // Chat related tables
 export const chatType = pgEnum("type", ["user", "assistant"]);
-
+export const chatVideoStatus = pgEnum("chat_video_status", [
+  "pending",
+  "completed",
+  "failed",
+]);
 export const chat_space = pgTable("chat_space", {
   id: text("id")
     .primaryKey()
@@ -99,7 +104,8 @@ export const chat_video = pgTable("chat_video", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
-  url: text("url").notNull(),
+  url: text("url"),
+  status: chatVideoStatus().default("pending"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
   chatId: text("chat_id")

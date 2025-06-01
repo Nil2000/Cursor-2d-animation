@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
+    "kafkajs": "^2.2.4",
     "lucide-react": "^0.511.0",
     "motion": "^12.11.4",
     "next": "15.3.2",

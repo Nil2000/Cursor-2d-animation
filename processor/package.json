@@ -6,7 +6,13 @@
   "devDependencies": {
     "@types/bun": "latest"
   },
+  "scripts": {
+    "start_processor": "bun run src/index.ts"
+  },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
   }
 }

@@ -20,6 +20,13 @@ export async function POST(req: NextRequest) {
       previousContextId: contextId || undefined,
     });
 
+    if (!textResponse || !textResponse.text) {
+      return NextResponse.json(
+        { error: "Failed to generate response" },
+        { status: 500 }
+      );
+    }
+
     console.log("Text response from chat completions:", textResponse);
 
     await addChatToSpace(
