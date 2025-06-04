@@ -36,7 +36,7 @@ export async function POST(
   { params }: { params: Promise<{ videoId: string }> }
 ) {
   const { videoId } = await params;
-  const { url } = await req.json();
+  const { url, status } = await req.json();
 
   const secret_key = req.headers.get("x-secret-key");
   if (!secret_key || secret_key !== process.env.INTERNAL_API_KEY) {
@@ -47,7 +47,7 @@ export async function POST(
     await db
       .update(chat_video)
       .set({
-        status: "completed",
+        status,
         url: url,
         updatedAt: new Date(),
       })
