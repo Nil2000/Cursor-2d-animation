@@ -28,12 +28,16 @@ export const generateChatCompletions = async ({
 
   const { text, providerMetadata } = await generateText({
     model: openai.responses("chatgpt-4o-latest"),
-    system: "you are a helpful assistant",
+    system:
+      'You are a helpful assistant. For every response, return a JSON object with two fields: \'title\' (a short, relevant title for the answer) and \'answer\' (the main response). Example: { "title": "Short Title", "answer": "Your detailed answer here." }',
     prompt: message,
   });
 
+  const jsonResponse = JSON.parse(text);
+
   return {
-    text,
+    text: jsonResponse.answer,
     contextId: providerMetadata?.openai.responseId as string,
+    title: jsonResponse.title || "No Title Provided",
   };
 };

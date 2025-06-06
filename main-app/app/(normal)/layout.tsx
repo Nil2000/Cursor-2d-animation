@@ -4,6 +4,7 @@ import { ChatSidebar } from "./_components/chat-sidebar";
 import ThemeButton from "@/components/theme-button";
 import ChatNavbar from "./_components/chat-navbar";
 import { cookies } from "next/headers";
+import { ChatPageProvider } from "@/components/providers/chat-provider";
 
 export default async function Layout({
   children,
@@ -16,8 +17,10 @@ export default async function Layout({
     <SidebarProvider defaultOpen={defaultOpen}>
       <ChatSidebar />
       <main className="flex flex-col w-full min-h-screen overflow-hidden relative flex-1">
-        <ChatNavbar />
-        {children}
+        <ChatPageProvider>
+          <ChatNavbar />
+          {children}
+        </ChatPageProvider>
       </main>
     </SidebarProvider>
   );

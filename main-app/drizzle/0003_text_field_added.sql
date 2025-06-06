@@ -1,0 +1,1 @@
+ALTER TABLE "chat_space" ADD COLUMN "title" text;
