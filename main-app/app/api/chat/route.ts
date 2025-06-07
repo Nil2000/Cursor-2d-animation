@@ -1,4 +1,8 @@
-import { addChatToSpace, createChatSpace } from "@/lib/chat-utls/spaceActions";
+import {
+  addChatToSpace,
+  createChatSpace,
+  setTitleToChatSpace,
+} from "@/lib/chat-utls/spaceActions";
 import { generateChatCompletions } from "@/lib/chat-utls/getChatCompletions";
 import { streamTextForChat } from "@/lib/chat-utls/streamText";
 import { NextRequest, NextResponse } from "next/server";
@@ -17,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const textResponse = await generateChatCompletions({
       message,
-      previousContextId: contextId || undefined,
+      previousContextId: undefined,
     });
 
     console.log("Text response from chat completions:", textResponse);
@@ -29,8 +33,14 @@ export async function POST(req: NextRequest) {
       textResponse.contextId
     );
 
+    await setTitleToChatSpace(newChatSpace[0].id, textResponse.title);
+
     return NextResponse.json(
-      { response: textResponse.text, contextId: textResponse.contextId },
+      {
+        response: textResponse.text,
+        contextId: textResponse.contextId,
+        title: textResponse.title,
+      },
       { status: 200 }
     );
   } catch (error) {

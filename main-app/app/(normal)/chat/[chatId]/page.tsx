@@ -25,6 +25,7 @@ export default async function page({
       chatId={chatId}
       spaceExists={!!chatSpace}
       userInfo={session.user}
+      chatTitle={chatSpace?.title || ""}
     />
   );
 }

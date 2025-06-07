@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { auth } from "../auth";
 import { db } from "../db";
 import { chat, chat_space } from "../schema";
+import { eq } from "drizzle-orm";
 
 export const createChatSpace = async (chatId: string) => {
   const session = await auth.api.getSession({
@@ -50,6 +51,24 @@ export const addChatToSpace = async (
     return newChat[0];
   } catch (error) {
     console.error("Error adding chat to space", error);
+    throw new Error("Internal server error");
+  }
+};
+
+export const setTitleToChatSpace = async (
+  chatSpaceId: string,
+  title: string
+) => {
+  try {
+    const updatedChatSpace = await db
+      .update(chat_space)
+      .set({ title, updatedAt: new Date() })
+      .where(eq(chat_space.id, chatSpaceId))
+      .returning();
+
+    return updatedChatSpace[0];
+  } catch (error) {
+    console.error("Error updating chat space title", error);
     throw new Error("Internal server error");
   }
 };
