@@ -25,9 +25,7 @@ export default function ChatNavbar() {
           {title}
         </h1>
       ) : (
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Chat
-        </h1>
+        ""
       )}
       <ThemeButton />
     </nav>
