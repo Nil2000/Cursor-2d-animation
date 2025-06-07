@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -5,16 +6,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
@@ -22,26 +17,36 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
-import {
-  ChevronDown,
-  ChevronUp,
-  PenBox,
-  Plus,
-  PlusCircle,
-  User2,
-} from "lucide-react";
+import { ChevronDown, PenBox, Plus, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
 };
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
-  // + New Chat
-  // History
+  const [chatHistory, setChatHistory] = useState<
+    { id: string; title: string }[]
+  >([]);
+
+  const init = async () => {
+    await axios
+      .get("/api/chat/history?limit=5")
+      .then((response) => {
+        setChatHistory(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching chat history:", error);
+      });
+  };
+  useEffect(() => {
+    init();
+  }, []);
+
   return (
     <Sidebar className="h-calc(100vh - 4rem)">
       <SidebarHeader className="flex items-center justify-center h-16 font-mono text-2xl font-bold">
@@ -68,18 +73,19 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
             </SidebarGroupLabel>
             <CollapsibleContent>
               <SidebarGroupContent>
-                <Link href={"/chat/new"}>
-                  <SidebarMenuButton className="cursor-pointer h-10">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Chat
-                  </SidebarMenuButton>
-                </Link>
-                <Link href={"/chat/history"}>
-                  <SidebarMenuButton className="cursor-pointer h-10">
-                    <Plus className="mr-2 h-4 w-4" />
-                    View History
-                  </SidebarMenuButton>
-                </Link>
+                {chatHistory.length > 0 && (
+                  <ul className="mb-2">
+                    {chatHistory.map((item) => (
+                      <li key={item.id}>
+                        <Link href={`/chat/${item.id}`}>
+                          <SidebarMenuButton className="cursor-pointer h-10 w-full text-left truncate">
+                            {item.title}
+                          </SidebarMenuButton>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <Button
                   variant={"link"}
                   className="text-muted-foreground hover:text-primary w-full"
