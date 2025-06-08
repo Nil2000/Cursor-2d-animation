@@ -1,15 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
-import { array } from "better-auth";
 import { relations } from "drizzle-orm";
-import {
-  pgTable,
-  text,
-  timestamp,
-  boolean,
-  integer,
-  pgEnum,
-} from "drizzle-orm/pg-core";
-import { encode } from "punycode";
+import { pgTable, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -72,6 +63,7 @@ export const chat_space = pgTable("chat_space", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
+  title: text("title"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
   userId: text("user_id")
