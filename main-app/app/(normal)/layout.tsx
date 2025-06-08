@@ -3,7 +3,10 @@ import React from "react";
 import { ChatSidebar } from "./_components/chat-sidebar";
 import ThemeButton from "@/components/theme-button";
 import ChatNavbar from "./_components/chat-navbar";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { ChatPageProvider } from "@/components/providers/chat-provider";
+import { auth } from "@/lib/auth";
+import { notFound } from "next/navigation";
 
 export default async function Layout({
   children,
@@ -12,12 +15,21 @@ export default async function Layout({
 }) {
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session || !session.user) {
+    notFound();
+  }
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <ChatSidebar />
+      <ChatSidebar userInfo={session?.user} />
       <main className="flex flex-col w-full min-h-screen overflow-hidden relative flex-1">
-        <ChatNavbar />
-        {children}
+        <ChatPageProvider>
+          <ChatNavbar />
+          {children}
+        </ChatPageProvider>
       </main>
     </SidebarProvider>
   );

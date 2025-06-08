@@ -1,4 +1,8 @@
-import { addChatToSpace, createChatSpace } from "@/lib/chat-utls/spaceActions";
+import {
+  addChatToSpace,
+  createChatSpace,
+  setTitleToChatSpace,
+} from "@/lib/chat-utls/spaceActions";
 import { generateChatCompletions } from "@/lib/chat-utls/getChatCompletions";
 import { streamTextForChat } from "@/lib/chat-utls/streamText";
 import { NextRequest, NextResponse } from "next/server";
@@ -21,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const textResponse = await generateChatCompletions({
       message,
-      previousContextId: contextId || undefined,
+      previousContextId: undefined,
     });
 
     if (!textResponse || !textResponse.text) {
@@ -58,12 +62,14 @@ export async function POST(req: NextRequest) {
       // Add to queue for processing
       await sendToQueue(message, newChatVideo[0].id);
     }
+    await setTitleToChatSpace(newChatSpace[0].id, textResponse.title);
 
     return NextResponse.json(
       {
         response: textResponse.text,
         contextId: textResponse.contextId,
         videoGenerationStatus: !codeBlock ? "no_code" : "pending",
+        title: textResponse.title,
       },
       { status: 200 }
     );

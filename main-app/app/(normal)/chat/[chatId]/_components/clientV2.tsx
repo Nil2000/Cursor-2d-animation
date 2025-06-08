@@ -9,14 +9,21 @@ import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import { SyncLoader } from "react-spinners";
+import { useChatPage } from "@/components/providers/chat-provider";
 
 type Props = {
   chatId: string;
   spaceExists: boolean;
   userInfo: UserInfoType;
+  chatTitle?: string;
 };
 
-export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
+export default function ChatPageV2({
+  chatId,
+  spaceExists,
+  userInfo,
+  chatTitle,
+}: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState<boolean>(false);
@@ -24,6 +31,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { setTitle } = useChatPage();
+
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
     const localStorageData = localStorage.getItem(key);
@@ -57,6 +66,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     return {
       response: res.data.response,
       contextId: res.data.contextId || null,
+      title: res.data.title || "No Title Provided",
     };
   };
 
@@ -149,10 +159,12 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           contextId: textResponse?.contextId || null,
         },
       ]);
+      setTitle(textResponse?.title);
       setSpaceLoading(false);
       return;
     }
     console.log("chat space exists");
+    setTitle(chatTitle || "Chat");
     getChatHistory();
     setSpaceLoading(false);
   };
