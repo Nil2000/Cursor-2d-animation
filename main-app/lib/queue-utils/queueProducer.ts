@@ -3,7 +3,7 @@ import { Kafka } from "kafkajs";
 let kafka_client: Kafka | null = null;
 let producer: any = null;
 
-export const getProducer = () => {
+export const getProducer = async () => {
   if (producer) {
     return producer;
   }
@@ -17,6 +17,7 @@ export const getProducer = () => {
     }
 
     producer = kafka_client.producer();
+    await producer.connect();
     return producer;
   } catch (error: any) {
     console.error("Error creating Kafka producer:", error.message);

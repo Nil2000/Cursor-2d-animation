@@ -10,6 +10,7 @@ import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import { SyncLoader } from "react-spinners";
 import { useChatPage } from "@/components/providers/chat-provider";
+import { ClientMessageType, UserInfoType } from "@/lib/types";
 
 type Props = {
   chatId: string;

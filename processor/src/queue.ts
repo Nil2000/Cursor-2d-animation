@@ -25,13 +25,13 @@ export const startConsumingMessages = async ({ topic, onMessage }: Props) => {
     eachMessage: async ({ topic, partition, message }) => {
       console.log({
         offset: message.offset,
-        value: message?.value?.toString(),
+        value: JSON.stringify(message),
         topic,
         partition,
       });
 
       if (message.value) {
-        onMessage(message.value.toString()).catch((error) => {
+        onMessage(JSON.stringify(message)).catch((error) => {
           console.error("Error processing message:", error.message);
           console.log(error.stack);
         });
