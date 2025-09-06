@@ -51,5 +51,17 @@ services:
       bash -c "
       sleep 20 && /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka_service:9092 --replication-factor 1 --partitions 3 --topic manim-topic"
 
+  # Database for Manim integration
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: manimdb
+      POSTGRES_DB: manimdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
 volumes:
   s3_data:
+  db_data:
