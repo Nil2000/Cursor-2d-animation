@@ -27,7 +27,9 @@ export default function ChatPageV2({
 }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
-  const [loading, setLoading] = React.useState<boolean>(false);
+  const [loading, setLoading] = React.useState<boolean>(
+    spaceExists ? false : true
+  );
   const [inputText, setInputText] = React.useState<string>("");
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
@@ -142,7 +144,6 @@ export default function ChatPageV2({
 
   const init = async () => {
     console.log("init", chatId, spaceExists, userInfo);
-    setSpaceLoading(true);
     if (!spaceExists) {
       console.log("no chat space");
       const message = getLastMessageFromLocalStorage();

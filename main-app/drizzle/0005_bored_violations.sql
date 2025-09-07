@@ -1,0 +1,1 @@
+ALTER TABLE "chat" ALTER COLUMN "type" SET NOT NULL;

@@ -36,6 +36,13 @@
       "when": 1748787277176,
       "tag": "0004_video_table_status_added",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1757186051504,
+      "tag": "0005_bored_violations",
+      "breakpoints": true
     }
   ]
 }
