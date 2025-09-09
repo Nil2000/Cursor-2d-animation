@@ -3,13 +3,13 @@ import {
   OPENROUTER_CHAT_COMPLETION_URL,
   OPENROUTER_API_KEY,
   MAX_TOKENS,
+  MANIM_SYSTEM_PRESET,
 } from "../constants";
 import { Messages } from "../types";
 
 export function streamTextForChat(
   messages: Messages,
-  cb: (chunk: string) => void,
-  systemPrompt?: string
+  cb: (chunk: string) => void
 ) {
   return new Promise<void>(async (resolve, reject) => {
     const response = await fetch(OPENROUTER_CHAT_COMPLETION_URL, {
@@ -21,8 +21,8 @@ export function streamTextForChat(
       body: JSON.stringify({
         model: MODEL,
         messages,
-        systemPrompt,
-        steam: true,
+        preset: MANIM_SYSTEM_PRESET,
+        stream: true,
       }),
     });
 

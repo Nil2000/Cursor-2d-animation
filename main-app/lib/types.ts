@@ -1,5 +1,6 @@
 export type ClientMessageType = {
-  type: "user" | "assistant";
+  id: string;
+  type: Role;
   body: string;
   contextId?: string | null;
   loading?: boolean;
@@ -24,6 +25,6 @@ export type Message = {
 export type Messages = Message[];
 
 export enum Role {
-  Agent = "assistant",
+  Assistant = "assistant",
   User = "user",
 }

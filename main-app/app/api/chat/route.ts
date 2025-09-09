@@ -1,6 +1,5 @@
 import {
   addChatToSpace,
-  createChatSpace,
   setTitleToChatSpace,
 } from "@/lib/chat-utils/spaceActions";
 import { streamTextForChat } from "@/lib/chat-utils/streamText";
@@ -14,7 +13,6 @@ import { Messages, Role } from "@/lib/types";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
-import { MANIM_SYSTEM_PROMPT } from "@/lib/constants";
 
 export async function POST(req: NextRequest) {
   const { chatId, message } = await req.json();
@@ -32,42 +30,42 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const newChatSpace = await createChatSpace(chatId);
-
-    await db.transaction(async (tx) => {
-      const newChatSpace = await tx
-        .insert(chat_space)
-        .values({
-          id: chatId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          userId: session.user.id,
-        })
-        .returning({ id: chat_space.id });
-
-      await tx.insert(chat).values({
-        id: chatId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        chatSpaceId: newChatSpace[0].id,
-        body: message,
-        type: "user",
-      });
-    });
-
+    // Check if this is the first conversation (no existing chats)
     const existingChats = await db
       .select()
       .from(chat)
       .where(eq(chat.chatSpaceId, chatId));
 
-    // Check if this is the first conversation (no existing chats)
     const isFirstConversation = existingChats.length === 0;
 
-    // Prepare messages for streaming
+    if (isFirstConversation) {
+      // Create new chat space and first chat in transaction
+      await db.transaction(async (tx) => {
+        await tx.insert(chat_space).values({
+          id: chatId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          userId: session.user.id,
+        });
+
+        await tx.insert(chat).values({
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          chatSpaceId: chatId,
+          body: message,
+          type: "user",
+        });
+      });
+    } else {
+      // Just add the new chat to existing space
+      await addChatToSpace(chatId, "user", message);
+    }
+
+    // Prepare messages for streaming (existing chats + current message)
     const messages: Messages = [
       ...existingChats.map((chat) => ({
         content: chat.body,
-        role: chat.type === "user" ? Role.User : Role.Agent,
+        role: chat.type === "user" ? Role.User : Role.Assistant,
       })),
       {
         content: message,
@@ -80,23 +78,25 @@ export async function POST(req: NextRequest) {
 
     const stream = new ReadableStream({
       async start(controller) {
+        const encoder = new TextEncoder();
         try {
-          await streamTextForChat(
-            messages,
-            (chunk: string) => {
-              fullResponse += chunk;
-              // Send chunk to client
-              controller.enqueue(new TextEncoder().encode(chunk));
-            },
-            isFirstConversation ? MANIM_SYSTEM_PROMPT : undefined
-          );
+          await streamTextForChat(messages, (chunk: string) => {
+            fullResponse += chunk;
+            // Send chunk to client in SSE format
+            const sseData = `data: ${JSON.stringify({ content: chunk })}\n\n`;
+            controller.enqueue(encoder.encode(sseData));
+          });
+
+          // Send completion signal
+          const doneData = `data: [DONE]\n\n`;
+          controller.enqueue(encoder.encode(doneData));
 
           // Close the stream
           controller.close();
 
           // After streaming is complete, add to database
-          const assistantChat = await addChatToSpace(
-            newChatSpace[0].id,
+          await addChatToSpace(
+            chatId,
             "assistant",
             fullResponse,
             undefined // No contextId for now since we're using streaming
@@ -122,20 +122,22 @@ export async function POST(req: NextRequest) {
           // }
           // Extract title from the AI response
           const extractedTitle = getTitleFromMessage(fullResponse);
-          await setTitleToChatSpace(newChatSpace[0].id, extractedTitle);
+          await setTitleToChatSpace(chatId, extractedTitle);
         } catch (error) {
           console.error("Error during streaming:", error);
-          controller.error(error);
+          controller.enqueue(
+            encoder.encode("Error: Failed to get AI response")
+          );
+          controller.close();
         }
       },
     });
 
-    return new NextResponse(stream, {
+    return new Response(stream, {
       headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Transfer-Encoding": "chunked",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
         Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "*",
       },
     });
   } catch (error) {

@@ -10,7 +10,7 @@ import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import { SyncLoader } from "react-spinners";
 import { useChatPage } from "@/components/providers/chat-provider";
-import { ClientMessageType, UserInfoType } from "@/lib/types";
+import { ClientMessageType, Role, UserInfoType } from "@/lib/types";
 
 type Props = {
   chatId: string;
@@ -33,6 +33,7 @@ export default function ChatPageV2({
   const [inputText, setInputText] = React.useState<string>("");
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
+  const abortController = React.useRef<AbortController | null>(null);
   const router = useRouter();
   const { setTitle } = useChatPage();
 
@@ -55,120 +56,222 @@ export default function ChatPageV2({
     return userData.lastSearchedFor.text;
   };
 
-  const getTextResponseForNewSpace = async (message: string) => {
-    const res = await axios.post(`/api/chat/`, {
-      message: message,
-      chatId: chatId,
-    });
+  // const getTextResponseForNewSpace = async (message: string) => {
+  //   const res = await axios.post(`/api/chat/`, {
+  //     message: message,
+  //     chatId: chatId,
+  //   });
 
-    if (res.status !== 200) {
-      console.log("error", res);
-      return;
+  //   if (res.status !== 200) {
+  //     console.log("error", res);
+  //     return;
+  //   }
+
+  //   return {
+  //     response: res.data.response,
+  //     contextId: res.data.contextId || null,
+  //     title: res.data.title || "No Title Provided",
+  //   };
+  // };
+
+  // const getChatHistory = async () => {
+  //   const res = await axios.get(`/api/chat/${chatId}`);
+
+  //   if (res.status !== 200) {
+  //     console.log("error", res);
+  //     router.push("/");
+  //     return;
+  //   }
+
+  //   console.log("chat history", res.data.messages);
+
+  //   setMessages(res.data.messages);
+  // };
+
+  const processStream = async (response: Response, input: string) => {
+    if (!response.ok) {
+      console.log("error", response);
+      throw new Error("Error processing stream");
     }
-
-    return {
-      response: res.data.response,
-      contextId: res.data.contextId || null,
-      title: res.data.title || "No Title Provided",
-    };
-  };
-
-  const getChatHistory = async () => {
-    const res = await axios.get(`/api/chat/${chatId}`);
-
-    if (res.status !== 200) {
-      console.log("error", res);
-      router.push("/");
-      return;
-    }
-
-    console.log("chat history", res.data.messages);
-
-    setMessages(res.data.messages);
-  };
-
-  const handleSendMessage = async () => {
-    if (!inputText || inputText.trim().length === 0) {
-      return;
-    }
-    const contextId = messages[messages.length - 1]?.contextId || null;
-    setLoading(true);
-    const newMessage: ClientMessageType = {
-      type: "user",
-      body: inputText,
-      contextId: null,
-    };
-    const responseMessage: ClientMessageType = {
-      type: "assistant",
-      body: "",
-      contextId: null,
-      loading: true,
-    };
-    setMessages((prev) => [...prev, newMessage, responseMessage]);
-    setInputText("");
-
+    const tempMessageId = `msg-${Date.now()}`;
     try {
-      const res = await axios.post(`/api/chat/${chatId}`, {
-        message: inputText,
-        contextId: contextId,
-      });
-
-      if (res.status !== 200) {
-        console.log("error", res);
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          {
-            ...responseMessage,
-            error: "Error sending message. Please try again.",
-            loading: false,
-          },
-        ]);
-        return;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        console.log("no reader");
+        throw new Error("No reader");
       }
+
       setMessages((prev) => [
-        ...prev.slice(0, -1),
+        ...prev,
         {
-          ...responseMessage,
-          body: res.data.response,
-          contextId: res.data.contextId || null,
-          loading: false,
+          id: tempMessageId,
+          type: Role.Assistant,
+          body: "",
+          contextId: null,
+          loading: true,
         },
       ]);
-      scrollToBottom();
+
+      let accumulatedContent = "";
+      let buffer = "";
+      let updateTimeout: NodeJS.Timeout | null = null;
+
+      const updateMessage = (body: string) => {
+        if (updateTimeout) {
+          clearTimeout(updateTimeout);
+        }
+
+        updateTimeout = setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === tempMessageId ? { ...msg, body } : msg
+            )
+          );
+        }, 50);
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === tempMessageId
+                ? { ...msg, body: accumulatedContent }
+                : msg
+            )
+          );
+
+          if (updateTimeout) {
+            clearTimeout(updateTimeout);
+          }
+          break;
+        }
+        const chunk = new TextDecoder().decode(value);
+        buffer += chunk;
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        let hasNewContent = false;
+
+        for (const line of lines) {
+          if (line.trim() === "") continue;
+
+          if (line.startsWith("data: ")) {
+            const data = line.substring(6);
+
+            if (data === "[DONE]") {
+              continue;
+            }
+
+            try {
+              const parsedData = JSON.parse(data) as {
+                content?: string;
+              };
+              const content = parsedData.content;
+              if (content) {
+                accumulatedContent += content;
+                hasNewContent = true;
+              }
+            } catch (e) {
+              console.error("Error parsing JSON:", e, "Raw data:", data);
+              // If it's not JSON, treat it as raw text (fallback)
+              if (data && data !== "[DONE]") {
+                accumulatedContent += data;
+                hasNewContent = true;
+              }
+            }
+          } else if (line.trim()) {
+            // Handle non-SSE format as fallback
+            accumulatedContent += line;
+            hasNewContent = true;
+          }
+        }
+        if (hasNewContent) {
+          updateMessage(accumulatedContent);
+        }
+      }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.log("error", error);
+      console.error("Error processing stream:", error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempMessageId
+            ? { ...msg, content: "Error: Failed to process response" }
+            : msg
+        )
+      );
+    } finally {
+      setLoading(false);
+      abortController.current = null;
+    }
+  };
+
+  const handleSendMessage = async (input: string) => {
+    if (!input || input.trim().length === 0) {
+      return;
+    }
+    const userInput = {
+      id: `msg-${Date.now()}`,
+      type: Role.User,
+      body: input,
+    };
+    setMessages((prev) => [...prev, userInput]);
+    setInputText("");
+    setLoading(true);
+
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    abortController.current = new AbortController();
+
+    try {
+      setTimeout(() => {
+        void (async () => {
+          try {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat`,
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  message: input,
+                  chatId: chatId,
+                }),
+                signal: abortController.current?.signal,
+              }
+            );
+
+            await processStream(response, input);
+          } catch (error) {
+            if ((error as Error).name !== "AbortError") {
+              console.error("Error sending message:", error);
+            }
+            setLoading(false);
+          }
+        })();
+      }, 0);
+    } catch (error) {
+      console.error("Error preparing request:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const init = async () => {
+    setSpaceLoading(false);
     console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
       console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
-      const textResponse = await getTextResponseForNewSpace(message);
-      if (!textResponse) {
-        console.log("no response");
+
+      if (!message) {
+        console.log("no message");
         return;
       }
-      setMessages((prev) => [
-        ...prev,
-        { type: "user", body: message },
-        {
-          type: "assistant",
-          body: textResponse?.response,
-          contextId: textResponse?.contextId || null,
-        },
-      ]);
-      setTitle(textResponse?.title);
-      setSpaceLoading(false);
-      return;
+      handleSendMessage(message);
+    } else {
+      // get Chat history
     }
-    console.log("chat space exists");
-    setTitle(chatTitle || "Chat");
-    getChatHistory();
-    setSpaceLoading(false);
   };
 
   const scrollToBottom = () => {
@@ -228,7 +331,7 @@ export default function ChatPageV2({
             onKeyDown={(e: React.KeyboardEvent) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleSendMessage();
+                handleSendMessage(inputText);
               }
             }}
             ref={inputContainerRef}
@@ -236,7 +339,7 @@ export default function ChatPageV2({
           <div className="flex justify-end">
             <Button
               className="rounded-lg h-9 w-9"
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage(inputText)}
               disabled={!inputText || loading}
             >
               <Send size={18} />
