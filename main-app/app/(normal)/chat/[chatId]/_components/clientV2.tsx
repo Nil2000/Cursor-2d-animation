@@ -108,7 +108,6 @@ export default function ChatPageV2({
           type: Role.Assistant,
           body: "",
           contextId: null,
-          loading: true,
         },
       ]);
 
@@ -316,7 +315,6 @@ export default function ChatPageV2({
                   <AssistantBubble
                     messageBody={message.body}
                     error={message.error}
-                    loading={message.loading}
                   />
                 )}
               </div>

@@ -3,7 +3,6 @@ export type ClientMessageType = {
   type: Role;
   body: string;
   contextId?: string | null;
-  loading?: boolean;
   error?: string;
 };
 
