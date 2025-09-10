@@ -9,7 +9,7 @@ type Props = {
   error?: string;
 };
 
-export default function AssistantBubble({ messageBody, error }: Props) {
+const AssistantBubble = React.memo(function AssistantBubble({ messageBody, error }: Props) {
   const { theme } = useTheme();
   return (
     <div className="flex justify-start items-end gap-2">
@@ -25,4 +25,6 @@ export default function AssistantBubble({ messageBody, error }: Props) {
       )}
     </div>
   );
-}
+});
+
+export default AssistantBubble;

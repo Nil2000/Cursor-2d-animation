@@ -56,37 +56,16 @@ export default function ChatPageV2({
     return userData.lastSearchedFor.text;
   };
 
-  // const getTextResponseForNewSpace = async (message: string) => {
-  //   const res = await axios.post(`/api/chat/`, {
-  //     message: message,
-  //     chatId: chatId,
-  //   });
+  const getChatHistory = async () => {
+    const res = await axios.get(`/api/chat/${chatId}`);
 
-  //   if (res.status !== 200) {
-  //     console.log("error", res);
-  //     return;
-  //   }
-
-  //   return {
-  //     response: res.data.response,
-  //     contextId: res.data.contextId || null,
-  //     title: res.data.title || "No Title Provided",
-  //   };
-  // };
-
-  // const getChatHistory = async () => {
-  //   const res = await axios.get(`/api/chat/${chatId}`);
-
-  //   if (res.status !== 200) {
-  //     console.log("error", res);
-  //     router.push("/");
-  //     return;
-  //   }
-
-  //   console.log("chat history", res.data.messages);
-
-  //   setMessages(res.data.messages);
-  // };
+    if (res.status !== 200) {
+      console.log("error", res);
+      router.push("/");
+      return;
+    }
+    setMessages(res.data.messages);
+  };
 
   const processStream = async (response: Response, input: string) => {
     if (!response.ok) {
@@ -270,6 +249,7 @@ export default function ChatPageV2({
       handleSendMessage(message);
     } else {
       // get Chat history
+      getChatHistory();
     }
   };
 
@@ -321,7 +301,7 @@ export default function ChatPageV2({
             ))}
         </div>
       </div>
-      <div className="absolute bottom-0 flex justify-center w-full p-4 px-6 mr-2 gap-4 z-10">
+      <div className="absolute bottom-0 flex justify-center w-full px-6 pb-0 pt-2 mr-2 gap-4 z-10">
         <div className="w-full lg:max-w-[1000px] bg-accent rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
           <TextComponent
             onChange={(value: string) => setInputText(value)}
