@@ -12,7 +12,7 @@ export default function ChatNavbar() {
   const { open, toggleSidebar } = useSidebar();
   const { title } = useChatPage();
   return (
-    <nav className="h-16 flex items-center justify-between p-4 w-full top-0 absolute bg-transparent z-10 backdrop-blur-md shadow-md">
+    <nav className="h-16 flex items-center justify-between p-4 top-0 absolute bg-transparent z-10 backdrop-blur-md shadow-md">
       <Button
         onClick={() => toggleSidebar()}
         variant="outline"

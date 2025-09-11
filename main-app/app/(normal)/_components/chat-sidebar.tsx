@@ -23,6 +23,7 @@ import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { UserInfoType } from "@/lib/types";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
@@ -48,7 +49,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
   }, []);
 
   return (
-    <Sidebar className="h-calc(100vh - 4rem)">
+    <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
       <SidebarHeader className="flex items-center justify-center h-16 font-mono text-2xl font-bold">
         AnimX
       </SidebarHeader>
