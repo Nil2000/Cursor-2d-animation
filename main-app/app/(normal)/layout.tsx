@@ -30,7 +30,7 @@ export default async function Layout({
     <SidebarProvider defaultOpen={defaultOpen}>
       <ChatSidebar userInfo={session?.user} />
       <SidebarInset>
-        <main className="flex flex-col w-full min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
+        <main className="flex flex-col min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
           <ChatPageProvider>
             <ChatNavbar />
             {children}

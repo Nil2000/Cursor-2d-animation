@@ -1,16 +1,20 @@
 import React from "react";
 import Markdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  vscDarkPlus,
-  vs,
-} from "react-syntax-highlighter/dist/cjs/styles/prism";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { Button } from "./ui/button";
 import { Copy, CopyCheck } from "lucide-react";
 import { useTheme } from "next-themes";
+import { Roboto_Mono } from "next/font/google";
+
+const robotoMono = Roboto_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+});
 
 type Props = {
   content: string;
+  isWrapped?: boolean;
 };
 
 function CodeCopyButton({ children }: any) {
@@ -31,27 +35,49 @@ function CodeCopyButton({ children }: any) {
   );
 }
 
-export default function MarkedownRendered({ content }: Props) {
+export default function MarkedownRendered({
+  content,
+  isWrapped = true,
+}: Props) {
   const { theme } = useTheme();
   return (
     <Markdown
       components={{
-        code({ node, inline, className, children, ...props }: any) {
+        code({ className, children, ...props }: any) {
           const match = /language-(\w+)/.exec(className || "");
-          return !inline && match ? (
+          const codeContent = Array.isArray(children)
+            ? children.join("")
+            : typeof children === "string"
+            ? children
+            : "";
+          const isInline = !match;
+          return !isInline ? (
             <div className="relative rounded-md">
-              <CodeCopyButton>{children}</CodeCopyButton>
+              <CodeCopyButton>{codeContent}</CodeCopyButton>
               <SyntaxHighlighter
                 {...props}
                 PreTag="div"
-                children={String(children).replace(/\n$/, "")}
-                language={match[1]}
-                style={theme === "dark" ? vscDarkPlus : vs}
+                children={codeContent}
+                language={match ? match[1] : "text"}
+                style={atomOneDark}
                 customStyle={{
                   margin: 0,
                   padding: "1rem",
-                  borderRadius: "0.25rem",
-                  border: "1px solid" + (theme === "dark" ? "#3f3f46" : "#ddd"),
+                  backgroundColor: theme === "dark" ? "#1a1620" : "#f5ecf9",
+                  color: theme === "dark" ? "#e5e5e5" : "#171717",
+                  borderRadius: "0.625rem",
+                  fontSize: "0.875rem",
+                  fontFamily: `var(--font-mono), ${robotoMono.style.fontFamily}`,
+                }}
+                wrapLongLines={isWrapped}
+                codeTagProps={{
+                  style: {
+                    fontFamily: `var(--font-mono), ${robotoMono.style.fontFamily}`,
+                    fontSize: "0.85em",
+                    whiteSpace: isWrapped ? "pre-wrap" : "pre",
+                    overflowWrap: isWrapped ? "break-word" : "normal",
+                    wordBreak: isWrapped ? "break-word" : "keep-all",
+                  },
                 }}
               />
             </div>
@@ -67,6 +93,23 @@ export default function MarkedownRendered({ content }: Props) {
             </code>
           );
         },
+        strong: (props: any) => (
+          <span className="font-bold">{props.children}</span>
+        ),
+        a: (props: any) => (
+          <a className="text-primary underline" href={props.href}>
+            {props.children}
+          </a>
+        ),
+        h1: (props: any) => (
+          <h1 className="my-4 text-2xl font-bold">{props.children}</h1>
+        ),
+        h2: (props: any) => (
+          <h2 className="my-3 text-xl font-bold">{props.children}</h2>
+        ),
+        h3: (props: any) => (
+          <h3 className="my-2 text-lg font-bold">{props.children}</h3>
+        ),
       }}
     >
       {content}
