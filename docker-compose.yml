@@ -29,11 +29,13 @@ services:
     container_name: manim_kafka
     ports:
       - "9092:9092"
+    env_file:
+      - .env
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_HOST_IP}:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
@@ -49,7 +51,7 @@ services:
       - kafka_service
     entrypoint: >
       bash -c "
-      sleep 20 && /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server kafka_service:9092 --replication-factor 1 --partitions 3 --topic manim-topic"
+      sleep 20 && /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --bootstrap-server ${KAFKA_HOST_IP}:9092 --replication-factor 1 --partitions 3 --topic manim-topic"
 
   # Database for Manim integration
   db:

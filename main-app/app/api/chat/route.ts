@@ -95,31 +95,32 @@ export async function POST(req: NextRequest) {
           controller.close();
 
           // After streaming is complete, add to database
-          await addChatToSpace(
+          const responseChatId = await addChatToSpace(
             chatId,
             "assistant",
             fullResponse,
             undefined // No contextId for now since we're using streaming
           );
 
-          // const codeBlock = await getPythonBlockCodeFromMessage(fullResponse);
-          // if (!codeBlock) {
-          //   console.log("No Python code block found in the response.");
-          // } else {
-          //   // Add to chat video with status pending
-          //   const newChatVideo = await db
-          //     .insert(chat_video)
-          //     .values({
-          //       chatId: assistantChat.id,
-          //       createdAt: new Date(),
-          //       updatedAt: new Date(),
-          //       status: "pending",
-          //       url: null,
-          //     })
-          //     .returning();
-          //   // Add to queue for processing
-          //   await sendToQueue(codeBlock, newChatVideo[0].id);
-          // }
+          // Get Python code block from response
+          const codeBlock = await getPythonBlockCodeFromMessage(fullResponse);
+          if (!codeBlock) {
+            console.log("No Python code block found in the response.");
+          } else {
+            // Add to chat video with status pending
+            const newChatVideo = await db
+              .insert(chat_video)
+              .values({
+                chatId: responseChatId,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                status: "pending",
+                url: null,
+              })
+              .returning();
+            // Add to queue for processing
+            await sendToQueue(codeBlock, newChatVideo[0].id);
+          }
           // Extract title from the AI response
           const extractedTitle = getTitleFromMessage(fullResponse);
           await setTitleToChatSpace(chatId, extractedTitle);

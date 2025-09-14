@@ -46,14 +46,20 @@ export const addChatToSpace = async (
   contextId?: string
 ) => {
   try {
-    await db.insert(chat).values({
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      chatSpaceId,
-      body: messageBody,
-      type: messageType,
-      contextId: contextId || null,
-    });
+    const chatId = await db
+      .insert(chat)
+      .values({
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        chatSpaceId,
+        body: messageBody,
+        type: messageType,
+        contextId: contextId || null,
+      })
+      .returning({
+        id: chat.id,
+      });
+    return chatId[0].id;
   } catch (error) {
     console.error("Error adding chat to space", error);
     throw new Error("Internal server error");
