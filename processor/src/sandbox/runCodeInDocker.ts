@@ -10,10 +10,10 @@ export async function runCodeInDocker(code: string) {
 
   const dockerCmd = `docker run --rm -v "${tempDir}:/manim" manimcommunity/manim manim -qm code.py`;
   try {
-    console.log("Running Docker command:", dockerCmd);
+    // console.log("Running Docker command:", dockerCmd);
     const result = await execAsync(dockerCmd);
 
-    console.log("Docker command output:", result.stdout);
+    // console.log("Docker command output:", result.stdout);
     if (result.stderr) {
       console.error("Docker command error output:", result.stderr);
     }

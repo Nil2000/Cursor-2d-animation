@@ -118,6 +118,7 @@ export async function POST(req: NextRequest) {
                 url: null,
               })
               .returning();
+            console.log("Codeblock", codeBlock);
             // Add to queue for processing
             await sendToQueue(codeBlock, newChatVideo[0].id);
           }

@@ -36,7 +36,31 @@ export async function POST(
   { params }: { params: Promise<{ videoId: string }> }
 ) {
   const { videoId } = await params;
-  const { url, status } = await req.json();
+
+  if (!videoId) {
+    return new NextResponse("Video ID is required", { status: 400 });
+  }
+
+  let body;
+  try {
+    body = await req.json();
+  } catch (error) {
+    console.error("Error parsing request body:", error);
+    return new NextResponse("Invalid JSON body", { status: 400 });
+  }
+
+  const { url, status } = body;
+
+  console.log("URL:", url);
+  console.log("Status:", status);
+
+  if (!url || !status) {
+    return new NextResponse("URL and status are required", { status: 400 });
+  }
+
+  if (status !== "completed" && status !== "failed") {
+    return new NextResponse("Invalid status", { status: 400 });
+  }
 
   const secret_key = req.headers.get("x-secret-key");
   if (!secret_key || secret_key !== process.env.INTERNAL_API_KEY) {
@@ -52,6 +76,8 @@ export async function POST(
         updatedAt: new Date(),
       })
       .where(eq(chat_video.id, videoId));
+
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("Error updating video status:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

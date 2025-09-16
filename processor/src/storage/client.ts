@@ -3,14 +3,23 @@ import { Client } from "minio";
 let minioClient: Client | null = null;
 
 export const getMinioClient = (): Client => {
-  if (!minioClient) {
-    minioClient = new Client({
-      endPoint: process.env.MINIO_ENDPOINT || "localhost",
-      port: parseInt(process.env.MINIO_PORT || "9000", 10),
-      useSSL: process.env.MINIO_USE_SSL === "true",
-      accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin",
-      secretKey: process.env.MINIO_SECRET_KEY || "minioadmin",
-    });
+  if (
+    !process.env.S3_ENDPOINT ||
+    !process.env.S3_ACCESS_KEY ||
+    !process.env.S3_SECRET_KEY
+  ) {
+    throw new Error(
+      "S3 not properly configured. Missing one of those variables: S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY"
+    );
   }
-  return minioClient;
+
+  const minioclient = new Client({
+    endPoint: process.env.S3_ENDPOINT,
+    accessKey: process.env.S3_ACCESS_KEY,
+    secretKey: process.env.S3_SECRET_KEY,
+    port: parseInt(process.env.S3_PORT || "9000"),
+    useSSL: process.env.S3_USE_SSL === "true",
+  });
+
+  return minioclient;
 };

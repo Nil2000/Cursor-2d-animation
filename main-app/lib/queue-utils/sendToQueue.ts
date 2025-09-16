@@ -1,5 +1,4 @@
 import { getProducer } from "./queueProducer";
-
 export async function sendToQueue(message: string, key: string) {
   try {
     const producer = await getProducer();
@@ -11,7 +10,6 @@ export async function sendToQueue(message: string, key: string) {
       topic: process.env.KAFKA_TOPIC || "default-topic",
       messages: [{ key, value: message }],
     });
-    console.log("Message sent to queue:", message);
   } catch (error: any) {
     console.error("Error sending message to queue:", error.message);
     console.log(error.stack);

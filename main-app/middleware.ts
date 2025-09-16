@@ -6,6 +6,7 @@ import {
   DEFAULT_REDIRECT,
   protectedRoutes,
   protectedRoutePatterns,
+  publicRoutes,
 } from "./lib/routes";
 
 export async function middleware(request: NextRequest) {
@@ -17,8 +18,11 @@ export async function middleware(request: NextRequest) {
     pattern.test(request.nextUrl.pathname)
   );
   const isApiAuthRoute = request.nextUrl.pathname.startsWith(authPrefix);
+  const isPublicRoute = publicRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
 
-  if (isApiAuthRoute) {
+  if (isApiAuthRoute || isPublicRoute) {
     return NextResponse.next();
   }
 
