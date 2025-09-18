@@ -1,4 +1,6 @@
 import { getMinioClient } from "./client";
+import fs from "fs";
+
 export async function uploadToS3Bucket(
   filePath: string,
   key: string
@@ -6,7 +8,7 @@ export async function uploadToS3Bucket(
   const s3Client = getMinioClient();
 
   try {
-    const fileBuffer = Buffer.from(filePath, "utf-8");
+    const fileBuffer = fs.readFileSync(filePath);
 
     await s3Client.putObject(
       process.env.S3_BUCKET!,
