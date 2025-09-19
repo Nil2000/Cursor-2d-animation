@@ -1,5 +1,4 @@
-import { generateChatCompletions } from "@/lib/chat-utls/getChatCompletions";
-import { addChatToSpace } from "@/lib/chat-utls/spaceActions";
+import { addChatToSpace } from "@/lib/chat-utils/spaceActions";
 import { db } from "@/lib/db";
 import { chat } from "@/lib/schema";
 import { NextRequest, NextResponse } from "next/server";
@@ -38,41 +37,41 @@ export async function GET(
   }
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ chatSpaceId: string }> }
-) {
-  const { chatSpaceId } = await params;
-  const { message, contextId } = await req.json();
+// export async function POST(
+//   req: NextRequest,
+//   { params }: { params: Promise<{ chatSpaceId: string }> }
+// ) {
+//   const { chatSpaceId } = await params;
+//   const { message, contextId } = await req.json();
 
-  if (!chatSpaceId || !message || !contextId) {
-    return new Response("Invalid request", { status: 400 });
-  }
+//   if (!chatSpaceId || !message || !contextId) {
+//     return new Response("Invalid request", { status: 400 });
+//   }
 
-  try {
-    await addChatToSpace(chatSpaceId, "user", message);
+//   try {
+//     await addChatToSpace(chatSpaceId, "user", message);
 
-    const response = await generateChatCompletions({
-      message,
-      previousContextId: contextId,
-    });
+//     const response = await generateChatCompletions({
+//       message,
+//       previousContextId: contextId,
+//     });
 
-    await addChatToSpace(
-      chatSpaceId,
-      "assistant",
-      response.text,
-      response.contextId
-    );
+//     await addChatToSpace(
+//       chatSpaceId,
+//       "assistant",
+//       response.text,
+//       response.contextId
+//     );
 
-    return NextResponse.json(
-      { response: response.text, contextId: response.contextId },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error creating chat message", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+//     return NextResponse.json(
+//       { response: response.text, contextId: response.contextId },
+//       { status: 200 }
+//     );
+//   } catch (error) {
+//     console.error("Error creating chat message", error);
+//     return NextResponse.json(
+//       { error: "Internal server error" },
+//       { status: 500 }
+//     );
+//   }
+// }

@@ -1,12 +1,12 @@
-type ClientMessageType = {
-  type: "user" | "assistant";
+export type ClientMessageType = {
+  id: string;
+  type: Role;
   body: string;
   contextId?: string | null;
-  loading?: boolean;
   error?: string;
 };
 
-type UserInfoType = {
+export type UserInfoType = {
   id: string;
   name: string;
   email: string;
@@ -15,3 +15,15 @@ type UserInfoType = {
   updatedAt: Date;
   image?: string | null | undefined | undefined;
 };
+
+export type Message = {
+  content: string;
+  role: Role;
+};
+
+export type Messages = Message[];
+
+export enum Role {
+  Assistant = "assistant",
+  User = "user",
+}

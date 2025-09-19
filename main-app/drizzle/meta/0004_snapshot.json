@@ -1,6 +1,6 @@
 {
-  "id": "4990af74-dbfe-4015-86ff-61fb06a01383",
-  "prevId": "7e5ecf6e-d65a-4fe0-9ba9-6004b3f7d5a7",
+  "id": "11e51369-4b48-44bb-bbf3-b754946a3f5e",
+  "prevId": "4990af74-dbfe-4015-86ff-61fb06a01383",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -239,7 +239,15 @@
           "name": "url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "chat_video_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'pending'"
         },
         "created_at": {
           "name": "created_at",
@@ -471,6 +479,11 @@
       "name": "type",
       "schema": "public",
       "values": ["user", "assistant"]
+    },
+    "public.chat_video_status": {
+      "name": "chat_video_status",
+      "schema": "public",
+      "values": ["pending", "completed", "failed"]
     }
   },
   "schemas": {},

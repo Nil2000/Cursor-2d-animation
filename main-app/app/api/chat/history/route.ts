@@ -1,5 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { chat_space } from "@/lib/schema";
+import { eq, desc } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,26 +21,27 @@ export async function GET(req: NextRequest) {
   const userId = session.user.id;
 
   try {
-    let chatHistory = [];
+    let chatHistory;
     if (limit) {
-      chatHistory = await db.query.chat_space.findMany({
-        where: (chat_space, { eq }) => eq(chat_space.userId, userId),
-        columns: {
-          id: true,
-          title: true,
-        },
-        orderBy: (chat_space, { desc }) => desc(chat_space.createdAt),
-        limit: parseInt(limit, 10),
-      });
+      chatHistory = await db
+        .select({
+          id: chat_space.id,
+          title: chat_space.title,
+        })
+        .from(chat_space)
+        .where(eq(chat_space.userId, userId))
+        .orderBy(desc(chat_space.createdAt))
+        .limit(parseInt(limit, 10));
+    } else {
+      chatHistory = await db
+        .select({
+          id: chat_space.id,
+          title: chat_space.title,
+        })
+        .from(chat_space)
+        .where(eq(chat_space.userId, userId))
+        .orderBy(desc(chat_space.createdAt));
     }
-    chatHistory = await db.query.chat_space.findMany({
-      where: (chat_space, { eq }) => eq(chat_space.userId, userId),
-      columns: {
-        id: true,
-        title: true,
-      },
-      orderBy: (chat_space, { desc }) => desc(chat_space.createdAt),
-    });
 
     return NextResponse.json(chatHistory);
   } catch (error) {

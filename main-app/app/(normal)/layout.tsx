@@ -1,4 +1,8 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import React from "react";
 import { ChatSidebar } from "./_components/chat-sidebar";
 import ThemeButton from "@/components/theme-button";
@@ -25,12 +29,14 @@ export default async function Layout({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <ChatSidebar userInfo={session?.user} />
-      <main className="flex flex-col w-full min-h-screen overflow-hidden relative flex-1">
-        <ChatPageProvider>
-          <ChatNavbar />
-          {children}
-        </ChatPageProvider>
-      </main>
+      <SidebarInset>
+        <main className="flex flex-col min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
+          <ChatPageProvider>
+            <ChatNavbar />
+            {children}
+          </ChatPageProvider>
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
