@@ -1,7 +1,8 @@
 import React from "react";
-import ChatPage from "./_components/client";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { fetchChatSpaceIfExists } from "@/actions/chatActions";
+import ChatPageV2 from "./_components/clientV2";
 
 export default async function page({
   params,
@@ -14,9 +15,17 @@ export default async function page({
     headers: await headers(),
   });
   if (!session || !session.user) {
-    return <div>no session</div>;
+    return <div>Not session</div>;
   }
 
   const { chatId } = await params;
-  return <ChatPage chatId={chatId} />;
+  const chatSpace = await fetchChatSpaceIfExists(chatId);
+  return (
+    <ChatPageV2
+      chatId={chatId}
+      spaceExists={!!chatSpace}
+      userInfo={session.user}
+      chatTitle={chatSpace?.title || ""}
+    />
+  );
 }

@@ -15,6 +15,34 @@
       "when": 1747136280380,
       "tag": "0001_for-better-auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747548441017,
+      "tag": "0002_chat-intro",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1749221643394,
+      "tag": "0003_text_field_added",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1748787277176,
+      "tag": "0004_video_table_status_added",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1757186051504,
+      "tag": "0005_bored_violations",
+      "breakpoints": true
     }
   ]
 }

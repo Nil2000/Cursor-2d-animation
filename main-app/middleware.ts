@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "./lib/auth";
-import { headers } from "next/headers";
+import { getSessionCookie } from "better-auth/cookies";
 import {
   authPrefix,
   authRoutes,
   DEFAULT_REDIRECT,
   protectedRoutes,
   protectedRoutePatterns,
+  publicRoutes,
 } from "./lib/routes";
 
 export async function middleware(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  const isLoggedIn = !!session?.user;
+  const sessionCookie = getSessionCookie(request);
+  const isLoggedIn = !!sessionCookie;
   const isAuthRoute = authRoutes.includes(request.nextUrl.pathname);
   const isProtectedRoute = protectedRoutes.includes(request.nextUrl.pathname);
   const isProtectedRouteRegex = protectedRoutePatterns.some((pattern) =>
     pattern.test(request.nextUrl.pathname)
   );
   const isApiAuthRoute = request.nextUrl.pathname.startsWith(authPrefix);
+  const isPublicRoute = publicRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
 
-  if (isApiAuthRoute) {
+  if (isApiAuthRoute || isPublicRoute) {
     return NextResponse.next();
   }
 
