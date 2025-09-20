@@ -42,6 +42,7 @@ export default function ChatPageV2({
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
+  const pollingIntervals = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   const router = useRouter();
   const { setTitle } = useChatPage();
 
@@ -49,6 +50,78 @@ export default function ChatPageV2({
     setSelectedVideo(video);
     setVideoDialogOpen(true);
   }, []);
+
+  const pollVideoStatus = React.useCallback(async (videoId: string) => {
+    try {
+      const response = await fetch(`/api/video_status/${videoId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const videoStatus = await response.json();
+      
+      // Update the message with the new video status
+      setMessages((prev) =>
+        prev.map((msg) => ({
+          ...msg,
+          chat_videos: msg.chat_videos?.map((video) =>
+            video.id === videoId
+              ? { ...video, status: videoStatus.status, url: videoStatus.url }
+              : video
+          ),
+        }))
+      );
+
+      // If video is completed or failed, stop polling
+      if (videoStatus.status === 'completed' || videoStatus.status === 'failed') {
+        const interval = pollingIntervals.current.get(videoId);
+        if (interval) {
+          clearInterval(interval);
+          pollingIntervals.current.delete(videoId);
+        }
+        console.log(`Video ${videoId} polling stopped. Status: ${videoStatus.status}`);
+      }
+    } catch (error) {
+      console.error(`Error polling video status for ${videoId}:`, error);
+      
+      // On error, mark video as failed and stop polling
+      setMessages((prev) =>
+        prev.map((msg) => ({
+          ...msg,
+          chat_videos: msg.chat_videos?.map((video) =>
+            video.id === videoId
+              ? { ...video, status: 'failed' as const }
+              : video
+          ),
+        }))
+      );
+      
+      const interval = pollingIntervals.current.get(videoId);
+      if (interval) {
+        clearInterval(interval);
+        pollingIntervals.current.delete(videoId);
+      }
+    }
+  }, []);
+
+  const startVideoPolling = React.useCallback((videoId: string) => {
+    // Don't start polling if already polling this video
+    if (pollingIntervals.current.has(videoId)) {
+      return;
+    }
+
+    console.log(`Starting video polling for ${videoId}`);
+    
+    // Poll immediately
+    pollVideoStatus(videoId);
+    
+    // Then poll every 3 seconds
+    const interval = setInterval(() => {
+      pollVideoStatus(videoId);
+    }, 3000);
+    
+    pollingIntervals.current.set(videoId, interval);
+  }, [pollVideoStatus]);
 
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -225,8 +298,8 @@ export default function ChatPageV2({
             return msg;
           })
         );
-        // Here you can implement polling logic or store the video ID for later use
-        // For example: startVideoPolling(streamMetadata.newChatVideoId);
+        // Start polling for the video status
+        startVideoPolling(streamMetadata.newChatVideoId);
       }
     } catch (error) {
       console.log("error", error);
@@ -326,6 +399,28 @@ export default function ChatPageV2({
   React.useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cleanup polling intervals when component unmounts or chatId changes
+  React.useEffect(() => {
+    return () => {
+      // Clear all polling intervals
+      pollingIntervals.current.forEach((interval) => {
+        clearInterval(interval);
+      });
+      pollingIntervals.current.clear();
+    };
+  }, [chatId]);
+
+  // Also start polling for any existing pending videos when component mounts
+  React.useEffect(() => {
+    messages.forEach((message) => {
+      message.chat_videos?.forEach((video) => {
+        if (video.status === 'pending' && !pollingIntervals.current.has(video.id)) {
+          startVideoPolling(video.id);
+        }
+      });
+    });
+  }, [messages, startVideoPolling]);
 
   if (spaceLoading) {
     return (
