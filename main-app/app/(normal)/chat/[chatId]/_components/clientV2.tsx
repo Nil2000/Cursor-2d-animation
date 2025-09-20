@@ -9,8 +9,14 @@ import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import { useChatPage } from "@/components/providers/chat-provider";
-import { ClientMessageType, Role, UserInfoType } from "@/lib/types";
+import { ClientMessageType, Role, UserInfoType, ClientMessageVideoType } from "@/lib/types";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Props = {
   chatId: string;
@@ -31,11 +37,18 @@ export default function ChatPageV2({
     spaceExists ? false : true
   );
   const [inputText, setInputText] = React.useState<string>("");
+  const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
+  const [selectedVideo, setSelectedVideo] = React.useState<ClientMessageVideoType | null>(null);
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
   const router = useRouter();
   const { setTitle } = useChatPage();
+
+  const handleOpenVideoDialog = React.useCallback((video: ClientMessageVideoType) => {
+    setSelectedVideo(video);
+    setVideoDialogOpen(true);
+  }, []);
 
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -189,12 +202,12 @@ export default function ChatPageV2({
       }
 
       // After stream is complete, you can use the metadata
-      if (streamMetadata.newChatVideoId) {
+      if (streamMetadata.newChatVideoId && typeof streamMetadata.newChatVideoId === 'string') {
         console.log(
           "Stream completed with video ID:",
           streamMetadata.newChatVideoId
         );
-        setMessages((prev) => {
+        setMessages((prev) => 
           prev.map((msg) => {
             if (msg.id === tempMessageId) {
               return {
@@ -202,17 +215,16 @@ export default function ChatPageV2({
                 chat_videos: [
                   ...(msg.chat_videos || []),
                   {
-                    id: streamMetadata.newChatVideoId,
-                    status: "pending",
+                    id: streamMetadata.newChatVideoId as string,
+                    status: "pending" as const,
                     url: null,
                   },
                 ],
               };
             }
             return msg;
-          });
-          return prev;
-        });
+          })
+        );
         // Here you can implement polling logic or store the video ID for later use
         // For example: startVideoPolling(streamMetadata.newChatVideoId);
       }
@@ -343,6 +355,7 @@ export default function ChatPageV2({
                     messageBody={message.body}
                     error={message.error}
                     chat_videos={message.chat_videos}
+                    onVideoClick={handleOpenVideoDialog}
                   />
                 )}
               </div>
@@ -373,6 +386,25 @@ export default function ChatPageV2({
           </div>
         </Card>
       </div>
+      
+      {/* Single Video Dialog */}
+      <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+        <DialogContent className="max-w-4xl w-full">
+          <DialogHeader>
+            <DialogTitle>Generated Video</DialogTitle>
+          </DialogHeader>
+          {selectedVideo && (
+            <div className="aspect-video w-full">
+              <video
+                src={selectedVideo.url!}
+                controls
+                className="w-full h-full rounded-md"
+                autoPlay
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -4,17 +4,20 @@ import MachineLogo from "./machine-logo";
 import MarkedownRendered from "@/components/markdown-renderer";
 import { useTheme } from "next-themes";
 import { ClientMessageVideoType } from "@/lib/types";
+import VideoMessage from "@/components/video-showcase";
 
 type Props = {
   messageBody: string;
   error?: string;
   chat_videos?: ClientMessageVideoType[];
+  onVideoClick?: (video: ClientMessageVideoType) => void;
 };
 
 const AssistantBubble = React.memo(function AssistantBubble({
   messageBody,
   error,
   chat_videos,
+  onVideoClick,
 }: Props) {
   const { theme } = useTheme();
   return (
@@ -26,22 +29,15 @@ const AssistantBubble = React.memo(function AssistantBubble({
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
-          <Card className="p-4 sm:max-w-3/4 max-w-full w-max rounded-md shadow-none">
+          <Card className="p-4 sm:max-w-3/4 rounded-md shadow-none">
             <MarkedownRendered content={messageBody} />
           </Card>
           {chat_videos?.map((video) => (
-            <Card
+            <VideoMessage
               key={video.id}
-              className="p-4 rounded-md shadow-none aspect-video"
-            >
-              {video.status === "pending" ? (
-                <p>Loading...</p>
-              ) : video.status === "completed" ? (
-                <video src={video.url!} controls />
-              ) : (
-                <p>Failed to generate video</p>
-              )}
-            </Card>
+              video={video}
+              onVideoClick={onVideoClick}
+            />
           ))}
         </div>
       )}
