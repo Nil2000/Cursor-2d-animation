@@ -4,6 +4,13 @@ export type ClientMessageType = {
   body: string;
   contextId?: string | null;
   error?: string;
+  chat_videos?: ClientMessageVideoType[];
+};
+
+export type ClientMessageVideoType = {
+  id: string;
+  status: "pending" | "completed" | "failed";
+  url: string | null;
 };
 
 export type UserInfoType = {

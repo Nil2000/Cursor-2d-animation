@@ -79,6 +79,8 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let newChatVideoId: string | null = null;
+
         try {
           await streamTextForChat(messages, (chunk: string) => {
             fullResponse += chunk;
@@ -86,13 +88,6 @@ export async function POST(req: NextRequest) {
             const sseData = `data: ${JSON.stringify({ content: chunk })}\n\n`;
             controller.enqueue(encoder.encode(sseData));
           });
-
-          // Send completion signal
-          const doneData = `data: [DONE]\n\n`;
-          controller.enqueue(encoder.encode(doneData));
-
-          // Close the stream
-          controller.close();
 
           // After streaming is complete, add to database
           const responseChatId = await addChatToSpace(
@@ -119,17 +114,33 @@ export async function POST(req: NextRequest) {
               })
               .returning();
             console.log("Codeblock", codeBlock);
+            newChatVideoId = newChatVideo[0].id;
             // Add to queue for processing
-            await sendToQueue(codeBlock, newChatVideo[0].id);
+            await sendToQueue(codeBlock, newChatVideoId);
           }
+
           // Extract title from the AI response
           const extractedTitle = getTitleFromMessage(fullResponse);
           await setTitleToChatSpace(chatId, extractedTitle);
+
+          // Send metadata at the end
+          const metadataData = `data: ${JSON.stringify({
+            type: "metadata",
+            chatId: chatId,
+            newChatVideoId: newChatVideoId,
+          })}\n\n`;
+          controller.enqueue(encoder.encode(metadataData));
+
+          // Send completion signal
+          const doneData = `data: [DONE]\n\n`;
+          controller.enqueue(encoder.encode(doneData));
         } catch (error) {
           console.error("Error during streaming:", error);
           controller.enqueue(
             encoder.encode("Error: Failed to get AI response")
           );
+        } finally {
+          // Close the stream
           controller.close();
         }
       },

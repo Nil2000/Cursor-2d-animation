@@ -1,5 +1,5 @@
 "use client";
-import { authClient } from "@/lib/auth-client";
+
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -8,7 +8,6 @@ import AssistantBubble from "./assistant-bubble";
 import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
-import { SyncLoader } from "react-spinners";
 import { useChatPage } from "@/components/providers/chat-provider";
 import { ClientMessageType, Role, UserInfoType } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -74,6 +73,9 @@ export default function ChatPageV2({
       throw new Error("Error processing stream");
     }
     const tempMessageId = `msg-${Date.now()}`;
+    let streamMetadata: { chatId?: string; newChatVideoId?: string | null } =
+      {};
+
     try {
       const reader = response.body?.getReader();
       if (!reader) {
@@ -146,7 +148,22 @@ export default function ChatPageV2({
             try {
               const parsedData = JSON.parse(data) as {
                 content?: string;
+                type?: string;
+                chatId?: string;
+                newChatVideoId?: string | null;
               };
+
+              // Handle metadata
+              if (parsedData.type === "metadata") {
+                streamMetadata = {
+                  chatId: parsedData.chatId,
+                  newChatVideoId: parsedData.newChatVideoId,
+                };
+                console.log("Received stream metadata:", streamMetadata);
+                continue;
+              }
+
+              // Handle content
               const content = parsedData.content;
               if (content) {
                 accumulatedContent += content;
@@ -169,6 +186,35 @@ export default function ChatPageV2({
         if (hasNewContent) {
           updateMessage(accumulatedContent);
         }
+      }
+
+      // After stream is complete, you can use the metadata
+      if (streamMetadata.newChatVideoId) {
+        console.log(
+          "Stream completed with video ID:",
+          streamMetadata.newChatVideoId
+        );
+        setMessages((prev) => {
+          prev.map((msg) => {
+            if (msg.id === tempMessageId) {
+              return {
+                ...msg,
+                chat_videos: [
+                  ...(msg.chat_videos || []),
+                  {
+                    id: streamMetadata.newChatVideoId,
+                    status: "pending",
+                    url: null,
+                  },
+                ],
+              };
+            }
+            return msg;
+          });
+          return prev;
+        });
+        // Here you can implement polling logic or store the video ID for later use
+        // For example: startVideoPolling(streamMetadata.newChatVideoId);
       }
     } catch (error) {
       console.log("error", error);
@@ -296,6 +342,7 @@ export default function ChatPageV2({
                   <AssistantBubble
                     messageBody={message.body}
                     error={message.error}
+                    chat_videos={message.chat_videos}
                   />
                 )}
               </div>
