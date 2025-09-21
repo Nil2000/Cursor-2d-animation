@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import VideoDialogShowCase from "./video-showcase-dialog";
 
 type Props = {
   chatId: string;
@@ -456,7 +457,7 @@ export default function ChatPageV2({
     <>
       <div className="relative overflow-y-auto">
         <div
-          className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-12rem)] scroll-smooth items-center"
+          className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-14rem)] scroll-smooth items-center"
           ref={messageContainerRef}
         >
           {messages.length > 0 &&
@@ -479,7 +480,7 @@ export default function ChatPageV2({
             ))}
         </div>
       </div>
-      <div className="absolute bottom-0 flex justify-center w-full px-6 pb-0 pt-2 mr-2 gap-4 z-10">
+      <div className="absolute bottom-0 flex justify-center w-full px-6 py-2 mr-2 gap-4 z-10">
         <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
           <TextComponent
             onChange={(value: string) => setInputText(value)}
@@ -505,23 +506,11 @@ export default function ChatPageV2({
       </div>
 
       {/* Single Video Dialog */}
-      <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
-        <DialogContent className="max-w-4xl w-full">
-          <DialogHeader>
-            <DialogTitle>Generated Video</DialogTitle>
-          </DialogHeader>
-          {selectedVideo && (
-            <div className="aspect-video w-full">
-              <video
-                src={selectedVideo.url!}
-                controls
-                className="w-full h-full rounded-md"
-                autoPlay
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <VideoDialogShowCase
+        videoUrl={selectedVideo?.url!}
+        showDialog={videoDialogOpen}
+        onDialogClose={() => setVideoDialogOpen(false)}
+      />
     </>
   );
 }

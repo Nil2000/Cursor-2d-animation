@@ -67,6 +67,15 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
     getChatSpaceHistory(limit);
   }, [triggerCheckHistory]);
 
+  // Auto-refresh chat history every 5 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      getChatSpaceHistory(limit);
+    }, 5000); // 5 seconds
+
+    return () => clearInterval(interval);
+  }, [limit, getChatSpaceHistory]);
+
   return (
     <ChatPageContext.Provider value={contextValue}>
       {children}
