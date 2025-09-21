@@ -120,8 +120,10 @@ export async function POST(req: NextRequest) {
           }
 
           // Extract title from the AI response
-          const extractedTitle = getTitleFromMessage(fullResponse);
-          await setTitleToChatSpace(chatId, extractedTitle);
+          if (isFirstConversation) {
+            const extractedTitle = getTitleFromMessage(fullResponse);
+            await setTitleToChatSpace(chatId, extractedTitle);
+          }
 
           // Send metadata at the end
           const metadataData = `data: ${JSON.stringify({

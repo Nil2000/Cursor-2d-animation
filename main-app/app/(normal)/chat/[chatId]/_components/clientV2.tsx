@@ -8,8 +8,13 @@ import AssistantBubble from "./assistant-bubble";
 import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
-import { useChatPage } from "@/components/providers/chat-provider";
-import { ClientMessageType, Role, UserInfoType, ClientMessageVideoType } from "@/lib/types";
+import { useChatHook } from "@/components/providers/chat-provider";
+import {
+  ClientMessageType,
+  Role,
+  UserInfoType,
+  ClientMessageVideoType,
+} from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import {
   Dialog,
@@ -38,18 +43,21 @@ export default function ChatPageV2({
   );
   const [inputText, setInputText] = React.useState<string>("");
   const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
-  const [selectedVideo, setSelectedVideo] = React.useState<ClientMessageVideoType | null>(null);
+  const [selectedVideo, setSelectedVideo] =
+    React.useState<ClientMessageVideoType | null>(null);
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
   const pollingIntervals = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   const router = useRouter();
-  const { setTitle } = useChatPage();
 
-  const handleOpenVideoDialog = React.useCallback((video: ClientMessageVideoType) => {
-    setSelectedVideo(video);
-    setVideoDialogOpen(true);
-  }, []);
+  const handleOpenVideoDialog = React.useCallback(
+    (video: ClientMessageVideoType) => {
+      setSelectedVideo(video);
+      setVideoDialogOpen(true);
+    },
+    []
+  );
 
   const pollVideoStatus = React.useCallback(async (videoId: string) => {
     try {
@@ -57,9 +65,9 @@ export default function ChatPageV2({
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const videoStatus = await response.json();
-      
+
       // Update the message with the new video status
       setMessages((prev) =>
         prev.map((msg) => ({
@@ -73,29 +81,34 @@ export default function ChatPageV2({
       );
 
       // If video is completed or failed, stop polling
-      if (videoStatus.status === 'completed' || videoStatus.status === 'failed') {
+      if (
+        videoStatus.status === "completed" ||
+        videoStatus.status === "failed"
+      ) {
         const interval = pollingIntervals.current.get(videoId);
         if (interval) {
           clearInterval(interval);
           pollingIntervals.current.delete(videoId);
         }
-        console.log(`Video ${videoId} polling stopped. Status: ${videoStatus.status}`);
+        console.log(
+          `Video ${videoId} polling stopped. Status: ${videoStatus.status}`
+        );
       }
     } catch (error) {
       console.error(`Error polling video status for ${videoId}:`, error);
-      
+
       // On error, mark video as failed and stop polling
       setMessages((prev) =>
         prev.map((msg) => ({
           ...msg,
           chat_videos: msg.chat_videos?.map((video) =>
             video.id === videoId
-              ? { ...video, status: 'failed' as const }
+              ? { ...video, status: "failed" as const }
               : video
           ),
         }))
       );
-      
+
       const interval = pollingIntervals.current.get(videoId);
       if (interval) {
         clearInterval(interval);
@@ -104,24 +117,27 @@ export default function ChatPageV2({
     }
   }, []);
 
-  const startVideoPolling = React.useCallback((videoId: string) => {
-    // Don't start polling if already polling this video
-    if (pollingIntervals.current.has(videoId)) {
-      return;
-    }
+  const startVideoPolling = React.useCallback(
+    (videoId: string) => {
+      // Don't start polling if already polling this video
+      if (pollingIntervals.current.has(videoId)) {
+        return;
+      }
 
-    console.log(`Starting video polling for ${videoId}`);
-    
-    // Poll immediately
-    pollVideoStatus(videoId);
-    
-    // Then poll every 3 seconds
-    const interval = setInterval(() => {
+      console.log(`Starting video polling for ${videoId}`);
+
+      // Poll immediately
       pollVideoStatus(videoId);
-    }, 3000);
-    
-    pollingIntervals.current.set(videoId, interval);
-  }, [pollVideoStatus]);
+
+      // Then poll every 3 seconds
+      const interval = setInterval(() => {
+        pollVideoStatus(videoId);
+      }, 3000);
+
+      pollingIntervals.current.set(videoId, interval);
+    },
+    [pollVideoStatus]
+  );
 
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
@@ -275,12 +291,15 @@ export default function ChatPageV2({
       }
 
       // After stream is complete, you can use the metadata
-      if (streamMetadata.newChatVideoId && typeof streamMetadata.newChatVideoId === 'string') {
+      if (
+        streamMetadata.newChatVideoId &&
+        typeof streamMetadata.newChatVideoId === "string"
+      ) {
         console.log(
           "Stream completed with video ID:",
           streamMetadata.newChatVideoId
         );
-        setMessages((prev) => 
+        setMessages((prev) =>
           prev.map((msg) => {
             if (msg.id === tempMessageId) {
               return {
@@ -415,7 +434,10 @@ export default function ChatPageV2({
   React.useEffect(() => {
     messages.forEach((message) => {
       message.chat_videos?.forEach((video) => {
-        if (video.status === 'pending' && !pollingIntervals.current.has(video.id)) {
+        if (
+          video.status === "pending" &&
+          !pollingIntervals.current.has(video.id)
+        ) {
           startVideoPolling(video.id);
         }
       });
@@ -481,7 +503,7 @@ export default function ChatPageV2({
           </div>
         </Card>
       </div>
-      
+
       {/* Single Video Dialog */}
       <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
         <DialogContent className="max-w-4xl w-full">

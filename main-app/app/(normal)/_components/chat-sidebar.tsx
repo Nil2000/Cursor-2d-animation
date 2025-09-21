@@ -17,36 +17,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ChevronDown, PenBox, Plus, PlusCircle } from "lucide-react";
+import { ChevronDown, PenBox } from "lucide-react";
 import Link from "next/link";
 import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
-import { useEffect, useState } from "react";
-import axios from "axios";
 import { UserInfoType } from "@/lib/types";
+import { useChatHook } from "@/components/providers/chat-provider";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
 };
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
-  const [chatHistory, setChatHistory] = useState<
-    { id: string; title: string }[]
-  >([]);
-
-  const init = async () => {
-    await axios
-      .get("/api/chat/history?limit=5")
-      .then((response) => {
-        setChatHistory(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching chat history:", error);
-      });
-  };
-  useEffect(() => {
-    init();
-  }, []);
+  const { limit, setLimit, history } = useChatHook();
 
   return (
     <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
@@ -74,9 +57,9 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
             </SidebarGroupLabel>
             <CollapsibleContent>
               <SidebarGroupContent>
-                {chatHistory.length > 0 && (
+                {history.length > 0 && (
                   <ul className="mb-2">
-                    {chatHistory.map((item) => (
+                    {history.map((item) => (
                       <li key={item.id}>
                         <Link href={`/chat/${item.id}`}>
                           <SidebarMenuButton className="cursor-pointer h-10 w-full text-left truncate">
@@ -90,6 +73,9 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
                 <Button
                   variant={"link"}
                   className="text-muted-foreground hover:text-primary w-full"
+                  onClick={() => {
+                    setLimit(limit + 5);
+                  }}
                 >
                   Show more
                 </Button>

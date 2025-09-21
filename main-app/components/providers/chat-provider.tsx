@@ -1,24 +1,27 @@
 "use client";
+import axios from "axios";
 import * as React from "react";
 
 // Define the shape of the context
 type ChatPageContextProps = {
-  title: string;
+  limit: number;
+  setLimit: (newLimit: number) => void;
   history: {
     id: string;
     title: string;
   }[];
-  setTitle: (newTitle: string) => void;
   setHistory: (newHistory: { id: string; title: string }[]) => void;
+  getChatSpaceHistory: (limit: number) => Promise<void>;
+  triggerCheck: () => void;
 };
 
 // Create the context with default values
 const ChatPageContext = React.createContext<ChatPageContextProps | null>(null);
 
-function useChatPage() {
+function useChatHook() {
   const context = React.useContext(ChatPageContext);
   if (!context) {
-    throw new Error("useChatPage must be used within a ChatPageProvider");
+    throw new Error("useChatHook must be used within a ChatPageProvider");
   }
   return context;
 }
@@ -27,15 +30,42 @@ function useChatPage() {
 const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [title, setTitle] = React.useState("");
+  const [limit, setLimit] = React.useState(5);
   const [history, setHistory] = React.useState<{ id: string; title: string }[]>(
     []
   );
+  const [triggerCheckHistory, setTriggerCheckHistory] = React.useState(false);
+
+  const getChatSpaceHistory = async (limit: number) => {
+    await axios
+      .get(`/api/chat/history?limit=${limit}`)
+      .then((response) => {
+        setHistory(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching chat history:", error);
+      });
+  };
+
+  const triggerCheck = () => {
+    setTriggerCheckHistory((prev) => !prev);
+  };
 
   const contextValue = React.useMemo(
-    () => ({ title, history, setTitle, setHistory }),
-    [title, history]
+    () => ({
+      limit,
+      setLimit,
+      history,
+      setHistory,
+      getChatSpaceHistory,
+      triggerCheck,
+    }),
+    [limit, setLimit, history, getChatSpaceHistory, triggerCheck]
   );
+
+  React.useEffect(() => {
+    getChatSpaceHistory(limit);
+  }, [triggerCheckHistory]);
 
   return (
     <ChatPageContext.Provider value={contextValue}>
@@ -44,4 +74,4 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export { ChatPageProvider, useChatPage };
+export { ChatPageProvider, useChatHook };
