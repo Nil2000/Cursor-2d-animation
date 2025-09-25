@@ -62,8 +62,8 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
                     {history.map((item) => (
                       <li key={item.id}>
                         <Link href={`/chat/${item.id}`}>
-                          <SidebarMenuButton className="cursor-pointer h-10 w-full text-left truncate">
-                            {item.title}
+                          <SidebarMenuButton className="cursor-pointer truncate h-10">
+                            {item.title.slice(0, 25) + "..."}
                           </SidebarMenuButton>
                         </Link>
                       </li>

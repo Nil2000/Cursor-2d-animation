@@ -145,18 +145,21 @@ export default function ChatPageV2({
     const localStorageData = localStorage.getItem(key);
     if (!localStorageData) {
       console.log("no data");
-      return;
+      return null;
     }
     const userData = JSON.parse(localStorageData);
     if (!userData.lastSearchedFor) {
       console.log("no last searched for");
-      return;
+      return null;
     }
-    localStorage.setItem(key, {
-      ...userData,
-      lastSearchedFor: {},
-    });
-    return userData.lastSearchedFor.text;
+
+    // Store the message text before deleting
+    const messageText = userData.lastSearchedFor.text;
+
+    // Delete the localStorage data completely
+    localStorage.removeItem(key);
+
+    return messageText;
   };
 
   const getChatHistory = async () => {
@@ -395,6 +398,7 @@ export default function ChatPageV2({
       const message = getLastMessageFromLocalStorage();
 
       if (!message) {
+        router.push("/");
         console.log("no message");
         return;
       }
