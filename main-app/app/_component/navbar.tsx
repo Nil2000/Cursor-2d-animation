@@ -6,7 +6,7 @@ import Logo from "@/components/logo";
 
 export default function Navbar() {
   return (
-    <nav className="flex items-center justify-between p-4 w-full h-16">
+    <nav className="flex items-center justify-between p-4 w-full h-16 absolute top-0 left-0 right-0">
       <div className="flex items-center gap-2">
         <Logo />
         {/* <div>AniX</div> */}

@@ -17,10 +17,9 @@ export default function Client() {
           theme === "system" ? "dark" : theme === "dark" ? "dark" : "light"
         }
       />
-      <div className="w-full h-full lg:w-[1000px] mx-auto flex flex-col items-center gap-4">
+      <div className="w-full h-full lg:w-[1000px] mx-auto flex flex-col items-center gap-4 relative">
         <Navbar />
         <HeroSection authenticated={!!session} name={session?.user?.name} />
-        <TextInputContainer />
       </div>
     </div>
   );

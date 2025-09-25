@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
+import TextInputContainer from "@/app/_component/text-input-container";
 
 export default function HeroSection({
   authenticated,
@@ -11,7 +12,7 @@ export default function HeroSection({
 }) {
   return (
     <motion.div
-      className="flex items-center justify-center flex-col h-max space-y-6 px-4"
+      className="flex items-center justify-center flex-col h-screen space-y-6 px-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -66,6 +67,7 @@ export default function HeroSection({
             <br />
             professional 2D animations powered by AI.
           </motion.p>
+          <TextInputContainer />
         </>
       ) : (
         // Non-authenticated User Content (Original Setup)
