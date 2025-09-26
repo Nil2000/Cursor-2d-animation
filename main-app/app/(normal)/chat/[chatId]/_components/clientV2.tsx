@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
-import { Loader, Send } from "lucide-react";
+import { Loader, Send, RotateCcw } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import { useChatHook } from "@/components/providers/chat-provider";
@@ -59,6 +59,29 @@ export default function ChatPageV2({
     },
     []
   );
+
+  // Check if there are any pending video generations
+  const hasPendingVideos = React.useMemo(() => {
+    return messages.some((message) =>
+      message.chat_videos?.some((video) => video.status === "pending")
+    );
+  }, [messages]);
+
+  // Check if we can show retry button (last message is from assistant and has failed video generation)
+  const canRetry = React.useMemo(() => {
+    if (messages.length < 2 || loading) return false;
+    const lastMessage = messages[messages.length - 1];
+
+    // Only show retry if last message is from assistant and has failed video generation
+    if (lastMessage.type !== Role.Assistant) return false;
+
+    // Check if there are any failed videos in the last assistant message
+    const hasFailedVideos = lastMessage.chat_videos?.some(
+      (video) => video.status === "failed"
+    );
+
+    return hasFailedVideos || false;
+  }, [messages, loading]);
 
   const pollVideoStatus = React.useCallback(async (videoId: string) => {
     try {
@@ -173,7 +196,7 @@ export default function ChatPageV2({
     setMessages(res.data.messages);
   };
 
-  const processStream = async (response: Response, input: string) => {
+  const processStream = async (response: Response) => {
     if (!response.ok) {
       console.log("error", response);
       throw new Error("Error processing stream");
@@ -374,7 +397,7 @@ export default function ChatPageV2({
               }
             );
 
-            await processStream(response, input);
+            await processStream(response);
           } catch (error) {
             if ((error as Error).name !== "AbortError") {
               console.error("Error sending message:", error);
@@ -386,6 +409,40 @@ export default function ChatPageV2({
     } catch (error) {
       console.error("Error preparing request:", error);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    setLoading(true);
+
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    abortController.current = new AbortController();
+
+    try {
+      // Remove the last message from the UI immediately (it should be an assistant message)
+      setMessages((prev) => prev.slice(0, -1));
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat/retry`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            chatId: chatId,
+          }),
+          signal: abortController.current?.signal,
+        }
+      );
+
+      await processStream(response);
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error retrying message:", error);
+        // Refresh the chat history on error to restore the correct state
+        getChatHistory();
+      }
       setLoading(false);
     }
   };
@@ -471,6 +528,8 @@ export default function ChatPageV2({
                   <UserBubble
                     messageBody={message.body}
                     imgUrl={userInfo.image}
+                    retry={true}
+                    retryHandler={handleRetry}
                   />
                 ) : (
                   <AssistantBubble
@@ -497,11 +556,22 @@ export default function ChatPageV2({
             }}
             ref={inputContainerRef}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {/* {canRetry && ( */}
+            <Button
+              size={"icon"}
+              variant="outline"
+              onClick={handleRetry}
+              disabled={loading || hasPendingVideos}
+              title="Retry last response"
+            >
+              <RotateCcw size={16} />
+            </Button>
+            {/* )} */}
             <Button
               size={"icon"}
               onClick={() => handleSendMessage(inputText)}
-              disabled={!inputText || loading}
+              disabled={!inputText || loading || hasPendingVideos}
             >
               <Send size={16} />
             </Button>
