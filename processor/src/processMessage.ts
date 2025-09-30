@@ -21,7 +21,7 @@ export async function processMessage(message: string) {
 
     if (status.status === "error") {
       console.error("Error running code in Docker:", status.error);
-      return;
+      throw new Error("Error running code in Docker: " + status.error);
     }
 
     // Update the video status in the API

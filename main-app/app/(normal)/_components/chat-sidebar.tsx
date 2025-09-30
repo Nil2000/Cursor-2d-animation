@@ -63,7 +63,9 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
                       <li key={item.id}>
                         <Link href={`/chat/${item.id}`}>
                           <SidebarMenuButton className="cursor-pointer truncate h-10">
-                            {item.title.slice(0, 25) + "..."}
+                            {item.title
+                              ? item.title.slice(0, 25) + "..."
+                              : "New Chat"}
                           </SidebarMenuButton>
                         </Link>
                       </li>

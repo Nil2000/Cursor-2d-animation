@@ -8,7 +8,6 @@ import AssistantBubble from "./assistant-bubble";
 import { Loader, Send, RotateCcw } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
-import { useChatHook } from "@/components/providers/chat-provider";
 import {
   ClientMessageType,
   Role,
@@ -16,12 +15,6 @@ import {
   ClientMessageVideoType,
 } from "@/lib/types";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import VideoDialogShowCase from "./video-showcase-dialog";
 
 type Props = {
@@ -528,7 +521,7 @@ export default function ChatPageV2({
                   <UserBubble
                     messageBody={message.body}
                     imgUrl={userInfo.image}
-                    retry={true}
+                    retry={canRetry && index === messages.length - 2}
                     retryHandler={handleRetry}
                   />
                 ) : (
@@ -557,17 +550,6 @@ export default function ChatPageV2({
             ref={inputContainerRef}
           />
           <div className="flex justify-end gap-2">
-            {/* {canRetry && ( */}
-            <Button
-              size={"icon"}
-              variant="outline"
-              onClick={handleRetry}
-              disabled={loading || hasPendingVideos}
-              title="Retry last response"
-            >
-              <RotateCcw size={16} />
-            </Button>
-            {/* )} */}
             <Button
               size={"icon"}
               onClick={() => handleSendMessage(inputText)}
