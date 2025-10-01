@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/fluent-ffmpeg": "^2.1.27"
   },
   "scripts": {
     "start": "bun run src/index.ts"
