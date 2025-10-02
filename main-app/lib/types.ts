@@ -9,8 +9,9 @@ export type ClientMessageType = {
 
 export type ClientMessageVideoType = {
   id: string;
+  quality: string;
   status: "pending" | "completed" | "failed";
-  url: string | null;
+  url: string;
 };
 
 export type UserInfoType = {

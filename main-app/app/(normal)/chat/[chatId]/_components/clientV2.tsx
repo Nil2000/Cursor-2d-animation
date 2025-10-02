@@ -195,8 +195,10 @@ export default function ChatPageV2({
       throw new Error("Error processing stream");
     }
     const tempMessageId = `msg-${Date.now()}`;
-    let streamMetadata: { chatId?: string; newChatVideoId?: string | null } =
-      {};
+    let streamMetadata: {
+      chatId?: string;
+      videos?: Array<ClientMessageVideoType>;
+    } = {};
 
     try {
       const reader = response.body?.getReader();
@@ -270,16 +272,16 @@ export default function ChatPageV2({
             try {
               const parsedData = JSON.parse(data) as {
                 content?: string;
-                type?: string;
+                type: string;
                 chatId?: string;
-                newChatVideoId?: string | null;
+                videos?: Array<ClientMessageVideoType>;
               };
 
               // Handle metadata
               if (parsedData.type === "metadata") {
                 streamMetadata = {
                   chatId: parsedData.chatId,
-                  newChatVideoId: parsedData.newChatVideoId,
+                  videos: parsedData.videos,
                 };
                 console.log("Received stream metadata:", streamMetadata);
                 continue;
@@ -312,13 +314,11 @@ export default function ChatPageV2({
 
       // After stream is complete, you can use the metadata
       if (
-        streamMetadata.newChatVideoId &&
-        typeof streamMetadata.newChatVideoId === "string"
+        streamMetadata.chatId &&
+        streamMetadata.videos &&
+        typeof streamMetadata.chatId === "string"
       ) {
-        console.log(
-          "Stream completed with video ID:",
-          streamMetadata.newChatVideoId
-        );
+        console.log("Stream completed with video ID:", streamMetadata.chatId);
         setMessages((prev) =>
           prev.map((msg) => {
             if (msg.id === tempMessageId) {
@@ -326,19 +326,17 @@ export default function ChatPageV2({
                 ...msg,
                 chat_videos: [
                   ...(msg.chat_videos || []),
-                  {
-                    id: streamMetadata.newChatVideoId as string,
-                    status: "pending" as const,
-                    url: null,
-                  },
+                  ...(streamMetadata.videos || []),
                 ],
               };
             }
             return msg;
           })
         );
-        // Start polling for the video status
-        startVideoPolling(streamMetadata.newChatVideoId);
+        // Start polling for each video
+        for (const video of streamMetadata.videos) {
+          startVideoPolling(video.id);
+        }
       }
     } catch (error) {
       console.log("error", error);

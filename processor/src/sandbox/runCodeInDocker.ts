@@ -48,16 +48,13 @@ const generateLowerQualityVideo = (
     console.log(`Generating ${height}p video...`);
     ffmpeg(inputPath)
       .size(`?x${height}`)
-      .videoCodec('libx264')
-      .outputOptions([
-        '-crf 23',
-        '-preset medium'
-      ])
-      .on('end', () => {
+      .videoCodec("libx264")
+      .outputOptions(["-crf 23", "-preset medium"])
+      .on("end", () => {
         console.log(`${height}p video generated successfully`);
         resolve();
       })
-      .on('error', (err: Error) => {
+      .on("error", (err: Error) => {
         console.error(`Error generating ${height}p video:`, err.message);
         reject(err);
       })
@@ -65,7 +62,10 @@ const generateLowerQualityVideo = (
   });
 };
 
-export async function runCodeInDocker(code: string, key: string) {
+export async function runCodeInDocker(
+  code: string,
+  videoIds: Array<{ id: string; quality: string }>
+) {
   fs.mkdirSync(tempDir, { recursive: true });
   fs.writeFileSync(`${tempDir}/code.py`, code);
 
@@ -108,34 +108,58 @@ export async function runCodeInDocker(code: string, key: string) {
         console.log("File size:", stats.size, "bytes");
 
         // Generate lower quality versions
-        const video480pPath = `${outputFileDir}/${file.replace(".mp4", "_480p.mp4")}`;
-        const video144pPath = `${outputFileDir}/${file.replace(".mp4", "_144p.mp4")}`;
+        const video480pPath = `${outputFileDir}/${file.replace(
+          ".mp4",
+          "_480p.mp4"
+        )}`;
+        const video144pPath = `${outputFileDir}/${file.replace(
+          ".mp4",
+          "_144p.mp4"
+        )}`;
 
         try {
           await generateLowerQualityVideo(fullPath, video480pPath, 480);
           await generateLowerQualityVideo(fullPath, video144pPath, 144);
         } catch (ffmpegError: any) {
-          console.error("Error generating lower quality videos:", ffmpegError.message);
+          console.error(
+            "Error generating lower quality videos:",
+            ffmpegError.message
+          );
           throw new Error(`FFmpeg processing failed: ${ffmpegError.message}`);
         }
 
         // Upload all three quality versions to S3
         console.log("Uploading high quality (1080p) video...");
-        const uploadStatus1080p = await uploadToS3Bucket(fullPath, `1080p_${key}`);
+        const uploadStatus1080p = await uploadToS3Bucket(
+          fullPath,
+          videoIds.find((video) => video.quality === "high")!.id! || ""
+        );
         if (uploadStatus1080p.status === "error") {
-          throw new Error(`S3 upload failed for 1080p: ${uploadStatus1080p.error}`);
+          throw new Error(
+            `S3 upload failed for 1080p: ${uploadStatus1080p.error}`
+          );
         }
 
         console.log("Uploading medium quality (480p) video...");
-        const uploadStatus480p = await uploadToS3Bucket(video480pPath, `480p_${key}`);
+        const uploadStatus480p = await uploadToS3Bucket(
+          video480pPath,
+          videoIds.find((video) => video.quality === "medium")!.id! || ""
+        );
         if (uploadStatus480p.status === "error") {
-          throw new Error(`S3 upload failed for 480p: ${uploadStatus480p.error}`);
+          throw new Error(
+            `S3 upload failed for 480p: ${uploadStatus480p.error}`
+          );
         }
 
         console.log("Uploading low quality (144p) video...");
-        const uploadStatus144p = await uploadToS3Bucket(video144pPath, `144p_${key}`);
+        const uploadStatus144p = await uploadToS3Bucket(
+          video144pPath,
+          videoIds.find((video) => video.quality === "low")!.id! || ""
+        );
         if (uploadStatus144p.status === "error") {
-          throw new Error(`S3 upload failed for 144p: ${uploadStatus144p.error}`);
+          throw new Error(
+            `S3 upload failed for 144p: ${uploadStatus144p.error}`
+          );
         }
 
         console.log("All quality versions uploaded successfully");
@@ -147,7 +171,24 @@ export async function runCodeInDocker(code: string, key: string) {
         return {
           status: "success",
           output: fullPath,
-          uploadUrl: uploadStatus1080p.url,
+          uploadUrls: [
+            {
+              id: videoIds.find((video) => video.quality === "high")!.id! || "",
+              quality: "high",
+              url: uploadStatus1080p.url,
+            },
+            {
+              id:
+                videoIds.find((video) => video.quality === "medium")!.id! || "",
+              quality: "medium",
+              url: uploadStatus480p.url,
+            },
+            {
+              id: videoIds.find((video) => video.quality === "low")!.id! || "",
+              quality: "low",
+              url: uploadStatus144p.url,
+            },
+          ],
           tempDir: tempDir,
         };
       }

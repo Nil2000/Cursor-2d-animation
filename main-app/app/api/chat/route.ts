@@ -79,7 +79,12 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
-        let newChatVideoId: string | null = null;
+        let videoQualityMap: Array<{
+          id: string;
+          quality: string;
+          url: string;
+          status: string;
+        }> = [];
 
         try {
           await streamTextForChat(messages, (chunk: string) => {
@@ -102,21 +107,34 @@ export async function POST(req: NextRequest) {
           if (!codeBlock) {
             console.log("No Python code block found in the response.");
           } else {
-            // Add to chat video with status pending
-            const newChatVideo = await db
+            // Create 3 videos with different qualities
+            const qualities = ["high", "medium", "low"] as const;
+            const now = new Date();
+
+            const newChatVideos = await db
               .insert(chat_video)
-              .values({
-                chatId: responseChatId,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                status: "pending",
-                url: null,
-              })
+              .values(
+                qualities.map((quality) => ({
+                  chatId: responseChatId,
+                  createdAt: now,
+                  updatedAt: now,
+                  status: "pending" as const,
+                  quality,
+                  url: null,
+                }))
+              )
               .returning();
+
             console.log("Codeblock", codeBlock);
-            newChatVideoId = newChatVideo[0].id;
-            // Add to queue for processing
-            await sendToQueue(codeBlock, newChatVideoId);
+            videoQualityMap = newChatVideos.map((video) => ({
+              id: video.id,
+              quality: video.quality,
+              url: "",
+              status: "pending",
+            }));
+
+            // Add to queue for processing - send all video IDs with quality info
+            await sendToQueue(codeBlock, videoQualityMap, responseChatId);
           }
 
           // Extract title from the AI response
@@ -129,7 +147,7 @@ export async function POST(req: NextRequest) {
           const metadataData = `data: ${JSON.stringify({
             type: "metadata",
             chatId: chatId,
-            newChatVideoId: newChatVideoId,
+            videos: videoQualityMap,
           })}\n\n`;
           controller.enqueue(encoder.encode(metadataData));
 
