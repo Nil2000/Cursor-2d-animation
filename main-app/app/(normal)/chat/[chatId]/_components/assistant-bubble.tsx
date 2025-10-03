@@ -10,7 +10,7 @@ type Props = {
   messageBody: string;
   error?: string;
   chat_videos?: ClientMessageVideoType[];
-  onVideoClick?: (video: ClientMessageVideoType) => void;
+  onVideoClick?: (allVideos: ClientMessageVideoType[]) => void;
 };
 
 const AssistantBubble = React.memo(function AssistantBubble({
@@ -20,6 +20,19 @@ const AssistantBubble = React.memo(function AssistantBubble({
   onVideoClick,
 }: Props) {
   const { theme } = useTheme();
+  
+  // Handler to pass all videos when any video is clicked
+  const handleVideoClick = React.useCallback(() => {
+    if (chat_videos && onVideoClick) {
+      onVideoClick(chat_videos);
+    }
+  }, [chat_videos, onVideoClick]);
+  
+  // Show only medium quality video card (default)
+  const mediumQualityVideo = React.useMemo(() => {
+    return chat_videos?.find((video) => video.quality === "medium");
+  }, [chat_videos]);
+  
   return (
     <div className="flex justify-start items-end gap-2">
       <MachineLogo />
@@ -32,13 +45,12 @@ const AssistantBubble = React.memo(function AssistantBubble({
           <Card className="p-4 sm:max-w-3/4 rounded-md shadow-none">
             <MarkedownRendered content={messageBody} />
           </Card>
-          {chat_videos?.map((video) => (
+          {mediumQualityVideo && (
             <VideoMessage
-              key={video.id}
-              video={video}
-              onVideoClick={onVideoClick}
+              video={mediumQualityVideo}
+              onVideoClick={handleVideoClick}
             />
-          ))}
+          )}
         </div>
       )}
     </div>

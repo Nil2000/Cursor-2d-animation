@@ -37,8 +37,9 @@ export default function ChatPageV2({
   );
   const [inputText, setInputText] = React.useState<string>("");
   const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
-  const [selectedVideo, setSelectedVideo] =
-    React.useState<ClientMessageVideoType | null>(null);
+  const [selectedVideos, setSelectedVideos] = React.useState<
+    ClientMessageVideoType[]
+  >([]);
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
@@ -46,8 +47,8 @@ export default function ChatPageV2({
   const router = useRouter();
 
   const handleOpenVideoDialog = React.useCallback(
-    (video: ClientMessageVideoType) => {
-      setSelectedVideo(video);
+    (allVideos: ClientMessageVideoType[]) => {
+      setSelectedVideos(allVideos);
       setVideoDialogOpen(true);
     },
     []
@@ -559,9 +560,9 @@ export default function ChatPageV2({
         </Card>
       </div>
 
-      {/* Single Video Dialog */}
+      {/* Video Dialog with all qualities */}
       <VideoDialogShowCase
-        videoUrl={selectedVideo?.url!}
+        videos={selectedVideos}
         showDialog={videoDialogOpen}
         onDialogClose={() => setVideoDialogOpen(false)}
       />

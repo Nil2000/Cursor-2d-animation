@@ -8,20 +8,46 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
+import { ClientMessageVideoType } from "@/lib/types";
+import VideoSelect from "./video-select";
 
 export default function VideoDialogShowCase({
-  videoUrl,
+  videos,
   showDialog,
   onDialogClose,
 }: {
-  videoUrl: string;
+  videos: ClientMessageVideoType[];
   showDialog: boolean;
   onDialogClose: () => void;
 }) {
+  const [selectedQuality, setSelectedQuality] =
+    React.useState<string>("medium");
   const [isDownloading, setIsDownloading] = React.useState(false);
 
+  // Get the currently selected video based on quality
+  const selectedVideo = React.useMemo(() => {
+    return videos.find((v) => v.quality === selectedQuality);
+  }, [videos, selectedQuality]);
+
+  // Sort videos by quality order: high, medium, low
+  const sortedVideos = React.useMemo(() => {
+    const qualityOrder = { high: 1, medium: 2, low: 3 };
+    return [...videos].sort(
+      (a, b) =>
+        (qualityOrder[a.quality as keyof typeof qualityOrder] || 999) -
+        (qualityOrder[b.quality as keyof typeof qualityOrder] || 999)
+    );
+  }, [videos]);
+
+  // Reset to medium quality when dialog opens
+  React.useEffect(() => {
+    if (showDialog) {
+      setSelectedQuality("medium");
+    }
+  }, [showDialog]);
+
   const handleDownload = async () => {
-    if (!videoUrl) {
+    if (!selectedVideo?.url) {
       console.error("No video URL available for download");
       return;
     }
@@ -29,7 +55,7 @@ export default function VideoDialogShowCase({
     setIsDownloading(true);
 
     try {
-      const response = await fetch(videoUrl, {
+      const response = await fetch(selectedVideo.url, {
         method: "GET",
         headers: {
           Accept: "video/mp4,video/*,*/*",
@@ -48,7 +74,7 @@ export default function VideoDialogShowCase({
       // Create download link
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `generated_video_${Date.now()}.mp4`;
+      link.download = `generated_video_${selectedQuality}_${Date.now()}.mp4`;
 
       // Append to body, click, and remove
       document.body.appendChild(link);
@@ -64,40 +90,64 @@ export default function VideoDialogShowCase({
     }
   };
 
+  // const getQualityLabel = (quality: string) => {
+  //   const labels: Record<string, string> = {
+  //     high: "High (1080p)",
+  //     medium: "Medium (720p)",
+  //     low: "Low (480p)",
+  //   };
+  //   return labels[quality] || quality;
+  // };
+
   return (
     <Dialog open={showDialog} onOpenChange={onDialogClose}>
       <DialogContent className="max-w-4xl w-full">
         <DialogHeader>
           <DialogTitle>Generated Video</DialogTitle>
         </DialogHeader>
-        {videoUrl && (
+        {selectedVideo?.url && (
           <div className="aspect-video w-full">
             <video
-              src={videoUrl}
+              key={selectedVideo.url}
+              src={selectedVideo.url}
               controls
               className="w-full h-full rounded-md"
               autoPlay
             />
           </div>
         )}
-        <DialogFooter>
-          <Button
-            onClick={handleDownload}
-            disabled={isDownloading || !videoUrl}
-            className="flex items-center gap-2"
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Downloading...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Download
-              </>
-            )}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Quality:</label>
+              <VideoSelect
+                value={selectedQuality}
+                onValueChange={setSelectedQuality}
+                videos={videos}
+              />
+            </div>
+            <Button
+              onClick={handleDownload}
+              disabled={
+                isDownloading ||
+                !selectedVideo?.url ||
+                selectedVideo?.status !== "completed"
+              }
+              className="flex items-center gap-2"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Download
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
