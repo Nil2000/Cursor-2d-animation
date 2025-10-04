@@ -23,6 +23,7 @@ import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
 import { UserInfoType } from "@/lib/types";
 import { useChatHook } from "@/components/providers/chat-provider";
+import { useCredits } from "@/hooks/use-credits";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
@@ -30,6 +31,7 @@ type ChatSidebarProps = {
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
   const { limit, setLimit, history } = useChatHook();
+  const { usersCredits, isUserPremium } = useCredits();
 
   return (
     <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
@@ -87,7 +89,10 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
         </Collapsible>
       </SidebarContent>
       <SidebarFooter>
-        <FooterCredits />
+        <FooterCredits
+          usersCredits={usersCredits}
+          isUserPremium={isUserPremium}
+        />
         <FooterUser userInfo={userInfo} />
       </SidebarFooter>
     </Sidebar>

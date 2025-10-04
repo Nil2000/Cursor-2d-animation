@@ -184,6 +184,13 @@ export const creditTransactionType = pgEnum("credit_transaction_type", [
   "bonus", // Free credits/promotions
 ]);
 
+// Transactional status enum
+export const transactionalStatus = pgEnum("transactional_status", [
+  "pending",
+  "completed",
+  "failed",
+]);
+
 // Credit transaction history table
 export const creditTransaction = pgTable("credit_transaction", {
   id: text("id")
@@ -194,6 +201,7 @@ export const creditTransaction = pgTable("credit_transaction", {
   balanceAfter: integer("balance_after").notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").notNull(),
+  transactionalStatus: transactionalStatus().notNull().default("pending"),
 
   userId: text("user_id")
     .notNull()
@@ -203,7 +211,7 @@ export const creditTransaction = pgTable("credit_transaction", {
   paymentId: text("payment_id").references(() => paymentHistory.paymentId, {
     onDelete: "cascade",
   }),
-  chatVideoId: text("chat_video_id").references(() => chat_video.id, {
+  chatId: text("chat_id").references(() => chat.id, {
     onDelete: "cascade",
   }),
 });
@@ -236,12 +244,12 @@ export const credit_transaction_payment_relation = relations(
   })
 );
 
-export const credit_transaction_chat_video_relation = relations(
+export const credit_transaction_chat_relation = relations(
   creditTransaction,
   ({ one }) => ({
-    chatVideo: one(chat_video, {
-      fields: [creditTransaction.chatVideoId],
-      references: [chat_video.id],
+    chat: one(chat, {
+      fields: [creditTransaction.chatId],
+      references: [chat.id],
     }),
   })
 );
@@ -253,8 +261,8 @@ export const payment_history_credit_transactions_relation = relations(
   })
 );
 
-export const chat_video_credit_transactions_relation = relations(
-  chat_video,
+export const chat_credit_transactions_relation = relations(
+  chat,
   ({ many }) => ({
     creditTransactions: many(creditTransaction),
   })
