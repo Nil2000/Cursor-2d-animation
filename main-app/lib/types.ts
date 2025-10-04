@@ -35,3 +35,8 @@ export enum Role {
   Assistant = "assistant",
   User = "user",
 }
+
+export type CreditsType = {
+  credits: number;
+  isPremium: boolean;
+};
