@@ -27,16 +27,16 @@ export default async function Layout({
     notFound();
   }
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <ChatSidebar userInfo={session?.user} />
-      <SidebarInset>
-        <main className="flex flex-col min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
-          <ChatPageProvider>
+    <ChatPageProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <ChatSidebar userInfo={session?.user} />
+        <SidebarInset>
+          <main className="flex flex-col min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
             <ChatNavbar />
             {children}
-          </ChatPageProvider>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </ChatPageProvider>
   );
 }

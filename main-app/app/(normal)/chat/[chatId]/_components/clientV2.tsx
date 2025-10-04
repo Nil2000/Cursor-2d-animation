@@ -1,17 +1,21 @@
 "use client";
-import { authClient } from "@/lib/auth-client";
+
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
-import { Loader, Send } from "lucide-react";
+import { Loader, Send, RotateCcw } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
-import { SyncLoader } from "react-spinners";
-import { useChatPage } from "@/components/providers/chat-provider";
-import { ClientMessageType, Role, UserInfoType } from "@/lib/types";
+import {
+  ClientMessageType,
+  Role,
+  UserInfoType,
+  ClientMessageVideoType,
+} from "@/lib/types";
 import { Card } from "@/components/ui/card";
+import VideoDialogShowCase from "./video-showcase-dialog";
 
 type Props = {
   chatId: string;
@@ -32,29 +36,147 @@ export default function ChatPageV2({
     spaceExists ? false : true
   );
   const [inputText, setInputText] = React.useState<string>("");
+  const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
+  const [selectedVideos, setSelectedVideos] = React.useState<
+    ClientMessageVideoType[]
+  >([]);
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
+  const pollingIntervals = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   const router = useRouter();
-  const { setTitle } = useChatPage();
+
+  const handleOpenVideoDialog = React.useCallback(
+    (allVideos: ClientMessageVideoType[]) => {
+      setSelectedVideos(allVideos);
+      setVideoDialogOpen(true);
+    },
+    []
+  );
+
+  // Check if there are any pending video generations
+  const hasPendingVideos = React.useMemo(() => {
+    return messages.some((message) =>
+      message.chat_videos?.some((video) => video.status === "pending")
+    );
+  }, [messages]);
+
+  // Check if we can show retry button (last message is from assistant and has failed video generation)
+  const canRetry = React.useMemo(() => {
+    if (messages.length < 2 || loading) return false;
+    const lastMessage = messages[messages.length - 1];
+
+    // Only show retry if last message is from assistant and has failed video generation
+    if (lastMessage.type !== Role.Assistant) return false;
+
+    // Check if there are any failed videos in the last assistant message
+    const hasFailedVideos = lastMessage.chat_videos?.some(
+      (video) => video.status === "failed"
+    );
+
+    return hasFailedVideos || false;
+  }, [messages, loading]);
+
+  const pollVideoStatus = React.useCallback(async (videoId: string) => {
+    try {
+      const response = await fetch(`/api/video_status/${videoId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const videoStatus = await response.json();
+
+      // Update the message with the new video status
+      setMessages((prev) =>
+        prev.map((msg) => ({
+          ...msg,
+          chat_videos: msg.chat_videos?.map((video) =>
+            video.id === videoId
+              ? { ...video, status: videoStatus.status, url: videoStatus.url }
+              : video
+          ),
+        }))
+      );
+
+      // If video is completed or failed, stop polling
+      if (
+        videoStatus.status === "completed" ||
+        videoStatus.status === "failed"
+      ) {
+        const interval = pollingIntervals.current.get(videoId);
+        if (interval) {
+          clearInterval(interval);
+          pollingIntervals.current.delete(videoId);
+        }
+        console.log(
+          `Video ${videoId} polling stopped. Status: ${videoStatus.status}`
+        );
+      }
+    } catch (error) {
+      console.error(`Error polling video status for ${videoId}:`, error);
+
+      // On error, mark video as failed and stop polling
+      setMessages((prev) =>
+        prev.map((msg) => ({
+          ...msg,
+          chat_videos: msg.chat_videos?.map((video) =>
+            video.id === videoId
+              ? { ...video, status: "failed" as const }
+              : video
+          ),
+        }))
+      );
+
+      const interval = pollingIntervals.current.get(videoId);
+      if (interval) {
+        clearInterval(interval);
+        pollingIntervals.current.delete(videoId);
+      }
+    }
+  }, []);
+
+  const startVideoPolling = React.useCallback(
+    (videoId: string) => {
+      // Don't start polling if already polling this video
+      if (pollingIntervals.current.has(videoId)) {
+        return;
+      }
+
+      console.log(`Starting video polling for ${videoId}`);
+
+      // Poll immediately
+      pollVideoStatus(videoId);
+
+      // Then poll every 3 seconds
+      const interval = setInterval(() => {
+        pollVideoStatus(videoId);
+      }, 3000);
+
+      pollingIntervals.current.set(videoId, interval);
+    },
+    [pollVideoStatus]
+  );
 
   const getLastMessageFromLocalStorage = () => {
     const key = `user/${userInfo.id}`;
     const localStorageData = localStorage.getItem(key);
     if (!localStorageData) {
       console.log("no data");
-      return;
+      return null;
     }
     const userData = JSON.parse(localStorageData);
     if (!userData.lastSearchedFor) {
       console.log("no last searched for");
-      return;
+      return null;
     }
-    localStorage.setItem(key, {
-      ...userData,
-      lastSearchedFor: {},
-    });
-    return userData.lastSearchedFor.text;
+
+    // Store the message text before deleting
+    const messageText = userData.lastSearchedFor.text;
+
+    // Delete the localStorage data completely
+    localStorage.removeItem(key);
+
+    return messageText;
   };
 
   const getChatHistory = async () => {
@@ -68,12 +190,17 @@ export default function ChatPageV2({
     setMessages(res.data.messages);
   };
 
-  const processStream = async (response: Response, input: string) => {
+  const processStream = async (response: Response) => {
     if (!response.ok) {
       console.log("error", response);
       throw new Error("Error processing stream");
     }
     const tempMessageId = `msg-${Date.now()}`;
+    let streamMetadata: {
+      chatId?: string;
+      videos?: Array<ClientMessageVideoType>;
+    } = {};
+
     try {
       const reader = response.body?.getReader();
       if (!reader) {
@@ -146,7 +273,22 @@ export default function ChatPageV2({
             try {
               const parsedData = JSON.parse(data) as {
                 content?: string;
+                type: string;
+                chatId?: string;
+                videos?: Array<ClientMessageVideoType>;
               };
+
+              // Handle metadata
+              if (parsedData.type === "metadata") {
+                streamMetadata = {
+                  chatId: parsedData.chatId,
+                  videos: parsedData.videos,
+                };
+                console.log("Received stream metadata:", streamMetadata);
+                continue;
+              }
+
+              // Handle content
               const content = parsedData.content;
               if (content) {
                 accumulatedContent += content;
@@ -168,6 +310,33 @@ export default function ChatPageV2({
         }
         if (hasNewContent) {
           updateMessage(accumulatedContent);
+        }
+      }
+
+      // After stream is complete, you can use the metadata
+      if (
+        streamMetadata.chatId &&
+        streamMetadata.videos &&
+        typeof streamMetadata.chatId === "string"
+      ) {
+        console.log("Stream completed with video ID:", streamMetadata.chatId);
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === tempMessageId) {
+              return {
+                ...msg,
+                chat_videos: [
+                  ...(msg.chat_videos || []),
+                  ...(streamMetadata.videos || []),
+                ],
+              };
+            }
+            return msg;
+          })
+        );
+        // Start polling for each video
+        for (const video of streamMetadata.videos) {
+          startVideoPolling(video.id);
         }
       }
     } catch (error) {
@@ -220,7 +389,7 @@ export default function ChatPageV2({
               }
             );
 
-            await processStream(response, input);
+            await processStream(response);
           } catch (error) {
             if ((error as Error).name !== "AbortError") {
               console.error("Error sending message:", error);
@@ -236,6 +405,40 @@ export default function ChatPageV2({
     }
   };
 
+  const handleRetry = async () => {
+    setLoading(true);
+
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    abortController.current = new AbortController();
+
+    try {
+      // Remove the last message from the UI immediately (it should be an assistant message)
+      setMessages((prev) => prev.slice(0, -1));
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat/retry`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            chatId: chatId,
+          }),
+          signal: abortController.current?.signal,
+        }
+      );
+
+      await processStream(response);
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error retrying message:", error);
+        // Refresh the chat history on error to restore the correct state
+        getChatHistory();
+      }
+      setLoading(false);
+    }
+  };
+
   const init = async () => {
     setSpaceLoading(false);
     console.log("init", chatId, spaceExists, userInfo);
@@ -244,6 +447,7 @@ export default function ChatPageV2({
       const message = getLastMessageFromLocalStorage();
 
       if (!message) {
+        router.push("/");
         console.log("no message");
         return;
       }
@@ -269,6 +473,31 @@ export default function ChatPageV2({
     scrollToBottom();
   }, [messages]);
 
+  // Cleanup polling intervals when component unmounts or chatId changes
+  React.useEffect(() => {
+    return () => {
+      // Clear all polling intervals
+      pollingIntervals.current.forEach((interval) => {
+        clearInterval(interval);
+      });
+      pollingIntervals.current.clear();
+    };
+  }, [chatId]);
+
+  // Also start polling for any existing pending videos when component mounts
+  React.useEffect(() => {
+    messages.forEach((message) => {
+      message.chat_videos?.forEach((video) => {
+        if (
+          video.status === "pending" &&
+          !pollingIntervals.current.has(video.id)
+        ) {
+          startVideoPolling(video.id);
+        }
+      });
+    });
+  }, [messages, startVideoPolling]);
+
   if (spaceLoading) {
     return (
       <div className="mt-20">
@@ -281,7 +510,7 @@ export default function ChatPageV2({
     <>
       <div className="relative overflow-y-auto">
         <div
-          className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-12rem)] scroll-smooth items-center"
+          className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-14rem)] scroll-smooth items-center"
           ref={messageContainerRef}
         >
           {messages.length > 0 &&
@@ -291,18 +520,22 @@ export default function ChatPageV2({
                   <UserBubble
                     messageBody={message.body}
                     imgUrl={userInfo.image}
+                    retry={canRetry && index === messages.length - 2}
+                    retryHandler={handleRetry}
                   />
                 ) : (
                   <AssistantBubble
                     messageBody={message.body}
                     error={message.error}
+                    chat_videos={message.chat_videos}
+                    onVideoClick={handleOpenVideoDialog}
                   />
                 )}
               </div>
             ))}
         </div>
       </div>
-      <div className="absolute bottom-0 flex justify-center w-full px-6 pb-0 pt-2 mr-2 gap-4 z-10">
+      <div className="absolute bottom-0 flex justify-center w-full px-6 py-2 mr-2 gap-4 z-10">
         <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
           <TextComponent
             onChange={(value: string) => setInputText(value)}
@@ -315,17 +548,24 @@ export default function ChatPageV2({
             }}
             ref={inputContainerRef}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               size={"icon"}
               onClick={() => handleSendMessage(inputText)}
-              disabled={!inputText || loading}
+              disabled={!inputText || loading || hasPendingVideos}
             >
               <Send size={16} />
             </Button>
           </div>
         </Card>
       </div>
+
+      {/* Video Dialog with all qualities */}
+      <VideoDialogShowCase
+        videos={selectedVideos}
+        showDialog={videoDialogOpen}
+        onDialogClose={() => setVideoDialogOpen(false)}
+      />
     </>
   );
 }

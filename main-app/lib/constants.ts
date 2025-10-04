@@ -1,4 +1,4 @@
-export const MODEL = "google/gemini-2.5-flash";
+export const MODEL = "openai/gpt-5-mini";
 
 export const OPENROUTER_CHAT_COMPLETION_URL =
   "https://openrouter.ai/api/v1/chat/completions";

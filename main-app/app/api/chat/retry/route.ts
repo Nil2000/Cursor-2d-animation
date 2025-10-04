@@ -8,14 +8,14 @@ import { getPythonBlockCodeFromMessage } from "@/lib/chat-utils/getPythonBlockCo
 import { getTitleFromMessage } from "@/lib/chat-utils/getTitleFromMessage";
 import { sendToQueue } from "@/lib/queue-utils/sendToQueue";
 import { db } from "@/lib/db";
-import { chat, chat_space, chat_video } from "@/lib/schema";
+import { chat, chat_video } from "@/lib/schema";
 import { Messages, Role } from "@/lib/types";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
-  const { chatId, message } = await req.json();
+  const { chatId } = await req.json();
 
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -25,53 +25,55 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!chatId || !message) {
+  if (!chatId) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
   try {
-    // Check if this is the first conversation (no existing chats)
+    // Get all existing chats for this space
     const existingChats = await db
       .select()
       .from(chat)
-      .where(eq(chat.chatSpaceId, chatId));
+      .where(eq(chat.chatSpaceId, chatId))
+      .orderBy(chat.createdAt);
 
-    const isFirstConversation = existingChats.length === 0;
-
-    if (isFirstConversation) {
-      // Create new chat space and first chat in transaction
-      await db.transaction(async (tx) => {
-        await tx.insert(chat_space).values({
-          id: chatId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          userId: session.user.id,
-        });
-
-        await tx.insert(chat).values({
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          chatSpaceId: chatId,
-          body: message,
-          type: "user",
-        });
-      });
-    } else {
-      // Just add the new chat to existing space
-      await addChatToSpace(chatId, "user", message);
+    if (existingChats.length === 0) {
+      return NextResponse.json(
+        { error: "No chat history found" },
+        { status: 404 }
+      );
     }
 
-    // Prepare messages for streaming (existing chats + current message)
-    const messages: Messages = [
-      ...existingChats.map((chat) => ({
-        content: chat.body,
-        role: chat.type === "user" ? Role.User : Role.Assistant,
-      })),
-      {
-        content: message,
-        role: Role.User,
-      },
-    ];
+    // Check if the last message is an assistant message and delete it
+    const lastMessage = existingChats[existingChats.length - 1];
+
+    if (lastMessage.type !== "assistant") {
+      return NextResponse.json(
+        { error: "Last message is not from assistant" },
+        { status: 400 }
+      );
+    }
+
+    // Delete the last assistant message and its associated chat_videos
+    await db.delete(chat_video).where(eq(chat_video.chatId, lastMessage.id));
+
+    await db.delete(chat).where(eq(chat.id, lastMessage.id));
+
+    // Get the remaining chats after deletion for context
+    const remainingChats = await db
+      .select()
+      .from(chat)
+      .where(eq(chat.chatSpaceId, chatId))
+      .orderBy(chat.createdAt);
+
+    // Prepare messages for streaming (remaining chats)
+    const messages: Messages = remainingChats.map((chat) => ({
+      content: chat.body,
+      role: chat.type === "user" ? Role.User : Role.Assistant,
+    }));
+
+    // Check if this is the first conversation after deletion
+    const isFirstConversation = remainingChats.length === 1;
 
     // Create a readable stream for streaming response
     let fullResponse = "";
@@ -79,12 +81,7 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
-        let videoQualityMap: Array<{
-          id: string;
-          quality: string;
-          url: string;
-          status: string;
-        }> = [];
+        let videoQualityMap: Array<{ id: string; quality: string }> = [];
 
         try {
           await streamTextForChat(messages, (chunk: string) => {
@@ -129,15 +126,13 @@ export async function POST(req: NextRequest) {
             videoQualityMap = newChatVideos.map((video) => ({
               id: video.id,
               quality: video.quality,
-              url: "",
-              status: "pending",
             }));
 
             // Add to queue for processing - send all video IDs with quality info
             await sendToQueue(codeBlock, videoQualityMap, responseChatId);
           }
 
-          // Extract title from the AI response
+          // Extract title from the AI response if this is the first conversation
           if (isFirstConversation) {
             const extractedTitle = getTitleFromMessage(fullResponse);
             await setTitleToChatSpace(chatId, extractedTitle);
@@ -174,7 +169,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error generating chat completions", error);
+    console.error("Error retrying chat completions", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
