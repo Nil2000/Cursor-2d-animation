@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import React from "react";
+import Link from "next/link";
 
 export default function FooterCredits({
   usersCredits,
@@ -28,9 +29,11 @@ export default function FooterCredits({
           <div className="h-full w-[50%] rounded-full bg-green-400"></div>
         </div>
         {!isUserPremium && (
-          <Button variant={"link"} className="mx-auto text-xs">
-            Add more credits
-          </Button>
+          <Link href="/pricing">
+            <Button variant={"link"} className="mx-auto text-xs">
+              Add more credits
+            </Button>
+          </Link>
         )}
       </div>
     </Card>

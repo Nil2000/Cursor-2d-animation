@@ -5,7 +5,8 @@ import React from "react";
 import ThemeButton from "@/components/theme-button";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, CreditCard } from "lucide-react";
+import Link from "next/link";
 
 export default function ChatNavbar() {
   const { open, toggleSidebar } = useSidebar();
@@ -14,7 +15,15 @@ export default function ChatNavbar() {
       <Button onClick={() => toggleSidebar()} variant="outline" size={"icon"}>
         {open ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
       </Button>
-      <ThemeButton />
+      <div className="flex items-center gap-2">
+        <Link href="/pricing">
+          <Button variant="ghost" size="sm" className="gap-2">
+            <CreditCard size={16} />
+            <span className="hidden sm:inline">Pricing</span>
+          </Button>
+        </Link>
+        <ThemeButton />
+      </div>
     </nav>
   );
 }

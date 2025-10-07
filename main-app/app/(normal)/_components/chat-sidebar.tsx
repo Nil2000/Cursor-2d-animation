@@ -17,7 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ChevronDown, PenBox } from "lucide-react";
+import { ChevronDown, PenBox, CreditCard } from "lucide-react";
 import Link from "next/link";
 import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
@@ -45,6 +45,14 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
               <SidebarMenuButton className="cursor-pointer h-10">
                 <PenBox className="mr-2 h-4 w-4" />
                 New Chat
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="mx-2">
+            <Link href={"/pricing"}>
+              <SidebarMenuButton className="cursor-pointer h-10">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Pricing
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
