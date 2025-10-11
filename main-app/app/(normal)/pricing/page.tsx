@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import { PricingHeader } from "./_components/pricing-header";
 import { PricingCards } from "./_components/pricing-cards";
-import { PricingFAQ } from "./_components/pricing-faq";
+import { AddOnCredits } from "./_components/add-on-credits";
+// import { PricingFAQ } from "./_components/pricing-faq";
 
 export const metadata: Metadata = {
   title: "Pricing - Manim AI",
@@ -14,7 +15,8 @@ export default function PricingPage() {
       <div className="container mx-auto px-4 py-12 md:py-20">
         <PricingHeader />
         <PricingCards />
-        <PricingFAQ />
+        <AddOnCredits />
+        {/* <PricingFAQ /> */}
       </div>
     </div>
   );
