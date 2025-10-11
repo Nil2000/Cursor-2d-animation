@@ -20,6 +20,7 @@ export default async function page({
 
   const { chatId } = await params;
   const chatSpace = await fetchChatSpaceIfExists(chatId);
+
   return (
     <ChatPageV2
       chatId={chatId}

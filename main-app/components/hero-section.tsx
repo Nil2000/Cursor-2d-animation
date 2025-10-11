@@ -2,6 +2,9 @@
 import React from "react";
 import { motion } from "framer-motion";
 import TextInputContainer from "@/app/_component/text-input-container";
+import { Button } from "./ui/button";
+import { ArrowRight, ArrowRightIcon } from "lucide-react";
+import Link from "next/link";
 
 export default function HeroSection({
   authenticated,
@@ -67,7 +70,16 @@ export default function HeroSection({
             <br />
             professional 2D animations powered by AI.
           </motion.p>
-          <TextInputContainer />
+          <Link href="/chat">
+            <Button className="group">
+              Start Creating
+              <ArrowRightIcon
+                className="-me-1 opacity-60 transition-transform group-hover:translate-x-0.5"
+                size={16}
+                aria-hidden="true"
+              />
+            </Button>
+          </Link>
         </>
       ) : (
         // Non-authenticated User Content (Original Setup)

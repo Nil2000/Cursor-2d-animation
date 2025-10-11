@@ -41,7 +41,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
       <SidebarContent className="px-2">
         <SidebarMenu>
           <SidebarMenuItem className="mx-2">
-            <Link href={"/"}>
+            <Link href={"/chat"}>
               <SidebarMenuButton className="cursor-pointer h-10">
                 <PenBox className="mr-2 h-4 w-4" />
                 New Chat

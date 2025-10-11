@@ -48,10 +48,12 @@ export default function ChatPageV2({
   const router = useRouter();
   const {
     usersCredits,
-    isUserPremium,
     isLoading: creditsLoading,
     refetch: refetchCredits,
   } = useCredits();
+
+  console.log("usersCredits", usersCredits);
+  console.log("creditsLoading", creditsLoading);
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -68,18 +70,18 @@ export default function ChatPageV2({
     );
   }, [messages]);
 
-  // Check if user has credits or is premium
+  // Check if user has credits
   const canSendMessage = React.useMemo(() => {
-    return isUserPremium || usersCredits > 0;
-  }, [isUserPremium, usersCredits]);
+    return usersCredits > 0;
+  }, [usersCredits]);
 
   // Check if we can show retry button (last message is from assistant and has failed video generation)
   const canRetry = React.useMemo(() => {
     if (messages.length < 2 || loading) return false;
-    
-    // Check if user has credits or is premium
-    if (!isUserPremium && usersCredits === 0) return false;
-    
+
+    // Check if user has credits
+    if (usersCredits === 0) return false;
+
     const lastMessage = messages[messages.length - 1];
 
     // Only show retry if last message is from assistant and has failed video generation
@@ -91,7 +93,7 @@ export default function ChatPageV2({
     );
 
     return hasFailedVideos || false;
-  }, [messages, loading, isUserPremium, usersCredits]);
+  }, [messages, loading, usersCredits]);
 
   const pollVideoStatus = React.useCallback(async (videoId: string) => {
     try {
@@ -377,11 +379,11 @@ export default function ChatPageV2({
     if (!input || input.trim().length === 0) {
       return;
     }
-
-    if (!isUserPremium && usersCredits === 0) {
+    console.log("usersCredits", usersCredits);
+    if (usersCredits === 0) {
       return;
     }
-
+    console.log("input", input);
     const userInput = {
       id: `msg-${Date.now()}`,
       type: Role.User,
@@ -430,7 +432,7 @@ export default function ChatPageV2({
 
   const handleRetry = async () => {
     // Check credits before retrying
-    if (!isUserPremium && usersCredits === 0) {
+    if (usersCredits === 0) {
       return;
     }
 
@@ -479,6 +481,7 @@ export default function ChatPageV2({
         console.log("no message");
         return;
       }
+      console.log("message", message);
       handleSendMessage(message);
     } else {
       // get Chat history
@@ -587,10 +590,6 @@ export default function ChatPageV2({
             <div className="text-xs text-muted-foreground">
               {creditsLoading ? (
                 <span>Loading credits...</span>
-              ) : isUserPremium ? (
-                <span className="text-yellow-600 dark:text-yellow-400 font-medium">
-                  Premium ✨
-                </span>
               ) : (
                 <span>
                   Credits:{" "}
