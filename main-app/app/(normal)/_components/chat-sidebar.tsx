@@ -23,15 +23,13 @@ import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
 import { UserInfoType } from "@/lib/types";
 import { useChatHook } from "@/components/providers/chat-provider";
-import { useCredits } from "@/hooks/use-credits";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
 };
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
-  const { limit, setLimit, history } = useChatHook();
-  const { usersCredits, isUserPremium } = useCredits();
+  const { limit, setLimit, history, usersCredits, isUserPremium } = useChatHook();
 
   return (
     <Sidebar className="h-calc(100vh - 4rem)" variant="inset">

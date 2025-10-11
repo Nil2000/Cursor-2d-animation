@@ -16,7 +16,7 @@ import {
 } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import VideoDialogShowCase from "./video-showcase-dialog";
-import { useCredits } from "@/hooks/use-credits";
+import { useChatHook } from "@/components/providers/chat-provider";
 
 type Props = {
   chatId: string;
@@ -46,14 +46,7 @@ export default function ChatPageV2({
   const abortController = React.useRef<AbortController | null>(null);
   const pollingIntervals = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   const router = useRouter();
-  const {
-    usersCredits,
-    isLoading: creditsLoading,
-    refetch: refetchCredits,
-  } = useCredits();
-
-  console.log("usersCredits", usersCredits);
-  console.log("creditsLoading", creditsLoading);
+  const { usersCredits, creditsLoading, refetchCredits } = useChatHook();
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -150,6 +143,8 @@ export default function ChatPageV2({
         clearInterval(interval);
         pollingIntervals.current.delete(videoId);
       }
+    } finally {
+      refetchCredits();
     }
   }, []);
 
@@ -379,11 +374,9 @@ export default function ChatPageV2({
     if (!input || input.trim().length === 0) {
       return;
     }
-    console.log("usersCredits", usersCredits);
     if (usersCredits === 0) {
       return;
     }
-    console.log("input", input);
     const userInput = {
       id: `msg-${Date.now()}`,
       type: Role.User,
@@ -481,7 +474,6 @@ export default function ChatPageV2({
         console.log("no message");
         return;
       }
-      console.log("message", message);
       handleSendMessage(message);
     } else {
       // get Chat history

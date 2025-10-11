@@ -13,6 +13,10 @@ type ChatPageContextProps = {
   setHistory: (newHistory: { id: string; title: string }[]) => void;
   getChatSpaceHistory: (limit: number) => Promise<void>;
   triggerCheck: () => void;
+  usersCredits: number;
+  isUserPremium: boolean;
+  creditsLoading: boolean;
+  refetchCredits: () => Promise<void>;
 };
 
 // Create the context with default values
@@ -35,6 +39,11 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
     []
   );
   const [triggerCheckHistory, setTriggerCheckHistory] = React.useState(false);
+  
+  // Credits state
+  const [credits, setCredits] = React.useState<number>(0);
+  const [isPremium, setIsPremium] = React.useState<boolean>(false);
+  const [creditsLoading, setCreditsLoading] = React.useState<boolean>(true);
 
   const getChatSpaceHistory = async (limit: number) => {
     await axios
@@ -45,6 +54,26 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
       .catch((error) => {
         console.error("Error fetching chat history:", error);
       });
+  };
+
+  const fetchCredits = async () => {
+    try {
+      setCreditsLoading(true);
+      const response = await fetch("/api/credits");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch credits");
+      }
+
+      const data = await response.json();
+      console.log("credits data from context", data);
+      setCredits(data.credits);
+      setIsPremium(data.isPremium);
+    } catch (err) {
+      console.error("Error fetching credits:", err);
+    } finally {
+      setCreditsLoading(false);
+    }
   };
 
   const triggerCheck = () => {
@@ -59,13 +88,22 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
       setHistory,
       getChatSpaceHistory,
       triggerCheck,
+      usersCredits: credits,
+      isUserPremium: isPremium,
+      creditsLoading,
+      refetchCredits: fetchCredits,
     }),
-    [limit, setLimit, history, getChatSpaceHistory, triggerCheck]
+    [limit, setLimit, history, getChatSpaceHistory, triggerCheck, credits, isPremium, creditsLoading]
   );
 
   React.useEffect(() => {
     getChatSpaceHistory(limit);
   }, [triggerCheckHistory]);
+
+  // Fetch credits on mount
+  React.useEffect(() => {
+    fetchCredits();
+  }, []);
 
   // Auto-refresh chat history every 5 seconds
   React.useEffect(() => {

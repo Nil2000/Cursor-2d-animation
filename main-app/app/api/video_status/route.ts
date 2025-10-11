@@ -98,23 +98,47 @@ export async function POST(req: NextRequest) {
 
             if (userDetails.length > 0 && !userDetails[0].isPremium) {
               if (anyFailed) {
-                // Mark transaction as failed - no credit deduction
-                await tx
-                  .update(creditTransaction)
-                  .set({ transactionalStatus: "failed" })
-                  .where(eq(creditTransaction.id, transaction.id));
+                // Refund credits since generation failed
+                const refundAmount = Math.abs(transaction.amount);
+                const currentCredits = await tx
+                  .select({ credits: user.credits })
+                  .from(user)
+                  .where(eq(user.id, transaction.userId))
+                  .limit(1);
 
-                console.log(
-                  `Marked transaction ${transaction.id} as failed - no credits deducted`
-                );
+                if (currentCredits.length > 0) {
+                  const newBalance = currentCredits[0].credits + refundAmount;
+
+                  // Refund the credits
+                  await tx
+                    .update(user)
+                    .set({ credits: newBalance })
+                    .where(eq(user.id, transaction.userId));
+
+                  // Mark original transaction as failed
+                  await tx
+                    .update(creditTransaction)
+                    .set({ transactionalStatus: "failed" })
+                    .where(eq(creditTransaction.id, transaction.id));
+
+                  // Create refund transaction record
+                  await tx.insert(creditTransaction).values({
+                    userId: transaction.userId,
+                    type: "refund",
+                    amount: refundAmount, // Positive for refund
+                    balanceAfter: newBalance,
+                    description: `Refund for failed video generation (chat ${videoChatId})`,
+                    chatId: videoChatId,
+                    createdAt: new Date(),
+                    transactionalStatus: "completed",
+                  });
+
+                  console.log(
+                    `Refunded ${refundAmount} credits for failed generation. New balance: ${newBalance}`
+                  );
+                }
               } else {
-                // All videos completed successfully - deduct credits
-                await tx
-                  .update(user)
-                  .set({ credits: transaction.balanceAfter })
-                  .where(eq(user.id, transaction.userId));
-
-                // Mark transaction as completed
+                // All videos completed successfully - mark transaction as completed
                 await tx
                   .update(creditTransaction)
                   .set({ transactionalStatus: "completed" })
@@ -122,7 +146,7 @@ export async function POST(req: NextRequest) {
 
                 totalCreditsDeducted = Math.abs(transaction.amount);
                 console.log(
-                  `Completed transaction ${transaction.id} - deducted ${totalCreditsDeducted} credits`
+                  `Completed transaction ${transaction.id} - ${totalCreditsDeducted} credits charged`
                 );
               }
             }

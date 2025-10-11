@@ -18,7 +18,6 @@ export const useCredits = () => {
       }
 
       const data: CreditsType = await response.json();
-      console.log("credits data", data);
       setCredits(data.credits);
       setIsPremium(data.isPremium);
     } catch (err) {

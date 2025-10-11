@@ -160,38 +160,46 @@ export async function POST(req: NextRequest) {
               status: "pending",
             }));
 
-            // Create pending credit transaction for non-premium users
+            // Deduct credits immediately for non-premium users to prevent race conditions
             if (!isPremium) {
-              const currentUserCredits = await db
-                .select({ credits: user.credits })
-                .from(user)
-                .where(eq(user.id, session.user.id))
-                .limit(1);
+              await db.transaction(async (tx) => {
+                const currentUserCredits = await tx
+                  .select({ credits: user.credits })
+                  .from(user)
+                  .where(eq(user.id, session.user.id))
+                  .limit(1);
 
-              if (currentUserCredits.length > 0) {
-                // Calculate total cost for all videos (usually 3 videos, 1 credit each = 3 credits)
-                const totalCost = newChatVideos.reduce(
-                  (sum, video) => sum + video.creditsCost,
-                  0
-                );
-                const newBalance = currentUserCredits[0].credits - totalCost;
+                if (currentUserCredits.length > 0) {
+                  // Calculate total cost for all videos (usually 3 videos, 1 credit each = 3 credits)
+                  const totalCost = newChatVideos.reduce(
+                    (sum, video) => sum + video.creditsCost,
+                    0
+                  );
+                  const newBalance = currentUserCredits[0].credits - totalCost;
 
-                // Create a single pending transaction for this chat
-                await db.insert(creditTransaction).values({
-                  userId: session.user.id,
-                  type: "video_generation",
-                  amount: -totalCost,
-                  balanceAfter: newBalance,
-                  description: `Video generation for chat ${responseChatId} (${newChatVideos.length} videos)`,
-                  chatId: responseChatId,
-                  createdAt: new Date(),
-                  transactionalStatus: "pending",
-                });
+                  // Deduct credits immediately
+                  await tx
+                    .update(user)
+                    .set({ credits: newBalance })
+                    .where(eq(user.id, session.user.id));
 
-                console.log(
-                  `Created pending credit transaction for ${newChatVideos.length} videos (${totalCost} credits)`
-                );
-              }
+                  // Create transaction record with pending status (will be updated to completed/failed later)
+                  await tx.insert(creditTransaction).values({
+                    userId: session.user.id,
+                    type: "video_generation",
+                    amount: -totalCost,
+                    balanceAfter: newBalance,
+                    description: `Video generation for chat ${responseChatId} (${newChatVideos.length} videos)`,
+                    chatId: responseChatId,
+                    createdAt: new Date(),
+                    transactionalStatus: "pending",
+                  });
+
+                  console.log(
+                    `Deducted ${totalCost} credits immediately for ${newChatVideos.length} videos. New balance: ${newBalance}`
+                  );
+                }
+              });
             }
 
             // Add to queue for processing - send all video IDs with quality info
