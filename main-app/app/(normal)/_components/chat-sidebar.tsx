@@ -29,7 +29,8 @@ type ChatSidebarProps = {
 };
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
-  const { limit, setLimit, history, usersCredits, isUserPremium } = useChatHook();
+  const { limit, setLimit, history, usersCredits, isUserPremium } =
+    useChatHook();
 
   return (
     <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
@@ -43,14 +44,6 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
               <SidebarMenuButton className="cursor-pointer h-10">
                 <PenBox className="mr-2 h-4 w-4" />
                 New Chat
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <SidebarMenuItem className="mx-2">
-            <Link href={"/pricing"}>
-              <SidebarMenuButton className="cursor-pointer h-10">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Pricing
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -82,7 +75,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
                 )}
                 <Button
                   variant={"link"}
-                  className="text-muted-foreground hover:text-primary w-full"
+                  className="text-muted-foreground hover:text-primary w-full cursor-pointer"
                   onClick={() => {
                     setLimit(limit + 5);
                   }}

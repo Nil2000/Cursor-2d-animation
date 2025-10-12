@@ -578,25 +578,7 @@ export default function ChatPageV2({
             ref={inputContainerRef}
             disabled={!canSendMessage}
           />
-          <div className="flex justify-between items-center gap-2">
-            <div className="text-xs text-muted-foreground">
-              {creditsLoading ? (
-                <span>Loading credits...</span>
-              ) : (
-                <span>
-                  Credits:{" "}
-                  <span
-                    className={
-                      usersCredits === 0
-                        ? "text-red-500 font-medium"
-                        : "font-medium"
-                    }
-                  >
-                    {usersCredits}
-                  </span>
-                </span>
-              )}
-            </div>
+          <div className="flex justify-end items-center gap-2">
             <Button
               size={"icon"}
               onClick={() => handleSendMessage(inputText)}
