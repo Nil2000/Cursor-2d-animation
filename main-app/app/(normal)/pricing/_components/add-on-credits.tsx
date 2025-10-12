@@ -10,36 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus, Coins } from "lucide-react";
-
-interface CreditPackage {
-  credits: number;
-  price: number;
-  popular?: boolean;
-  bonus?: number;
-}
-
-const creditPackages: CreditPackage[] = [
-  {
-    credits: 10,
-    price: 5,
-  },
-  {
-    credits: 50,
-    price: 20,
-    bonus: 5,
-    popular: true,
-  },
-  {
-    credits: 100,
-    price: 35,
-    bonus: 15,
-  },
-  {
-    credits: 250,
-    price: 75,
-    bonus: 50,
-  },
-];
+import { CREDIT_PACKAGES } from "@/lib/constants";
 
 export function AddOnCredits() {
   return (
@@ -59,7 +30,7 @@ export function AddOnCredits() {
 
       {/* Credit Packages */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-        {creditPackages.map((pkg) => (
+        {CREDIT_PACKAGES.map((pkg) => (
           <Card
             key={pkg.credits}
             className={`relative transition-all duration-300 hover:shadow-lg ${

@@ -12,83 +12,21 @@ import {
 import { Check, Sparkles, Zap, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { PRICING_PLANS_DATA } from "@/lib/constants";
+import type { BillingPeriod, PricingPlan } from "@/lib/types";
 
-type BillingPeriod = "monthly" | "yearly";
+// Icon mapping
+const iconMap = {
+  Sparkles: <Sparkles className="size-5" />,
+  Zap: <Zap className="size-5" />,
+  Rocket: <Rocket className="size-5" />,
+} as const;
 
-interface PricingPlan {
-  name: string;
-  description: string;
-  price: {
-    monthly: number;
-    yearly: number;
-  };
-  icon: React.ReactNode;
-  features: string[];
-  popular?: boolean;
-  cta: string;
-  highlight?: boolean;
-}
-
-const pricingPlans: PricingPlan[] = [
-  {
-    name: "Free",
-    description: "Perfect for trying out Manim AI",
-    price: {
-      monthly: 0,
-      yearly: 0,
-    },
-    icon: <Sparkles className="size-5" />,
-    features: [
-      "5 animations per month",
-      "720p video quality",
-      "Basic templates",
-      "Community support",
-      "Watermarked exports",
-    ],
-    cta: "Get Started",
-  },
-  {
-    name: "Pro",
-    description: "For professionals and creators",
-    price: {
-      monthly: 29,
-      yearly: 290,
-    },
-    icon: <Zap className="size-5" />,
-    features: [
-      "100 animations per month",
-      "1080p video quality",
-      "All premium templates",
-      "Priority support",
-      "No watermarks",
-      "Custom branding",
-      "Advanced AI features",
-    ],
-    popular: true,
-    highlight: true,
-    cta: "Start Pro Trial",
-  },
-  {
-    name: "Enterprise",
-    description: "For teams and organizations",
-    price: {
-      monthly: 99,
-      yearly: 990,
-    },
-    icon: <Rocket className="size-5" />,
-    features: [
-      "Unlimited animations",
-      "4K video quality",
-      "All features included",
-      "Dedicated support",
-      "Custom integrations",
-      "Team collaboration",
-      "API access",
-      "SLA guarantee",
-    ],
-    cta: "Contact Sales",
-  },
-];
+// Convert pricing plans data to include icons
+const pricingPlans: PricingPlan[] = PRICING_PLANS_DATA.map((plan) => ({
+  ...plan,
+  icon: iconMap[plan.iconName],
+}));
 
 export function PricingCards() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
