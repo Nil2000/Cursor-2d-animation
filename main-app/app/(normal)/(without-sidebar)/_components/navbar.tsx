@@ -6,7 +6,7 @@ import ThemeButton from "@/components/theme-button";
 
 export default function Navbar() {
   return (
-    <div className="p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-background/50">
+    <div className="p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-background/50 h-16">
       <Link href="/chat">
         <Button
           variant="outline"
