@@ -1,9 +1,4 @@
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { paymentHistory } from "@/lib/schema";
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -16,18 +11,23 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CreditCard } from "lucide-react";
 import { fetchPaymentHistory } from "@/actions/paymentActions";
+import { checkAuthentication } from "@/actions/authActions";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Payments - Manim AI",
+  description: "View all your payment transactions and purchase history",
+};
 
 export default async function PaymentsPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await checkAuthentication();
 
-  if (!session || !session.user) {
-    notFound();
+  if (!session) {
+    redirect("/login");
   }
 
   // Fetch all payment history for the user
-  const payments = await fetchPaymentHistory(session.user.id);
+  const payments = await fetchPaymentHistory(session.id);
   if (!payments) {
     notFound();
   }

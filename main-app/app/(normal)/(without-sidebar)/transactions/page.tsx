@@ -1,6 +1,4 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -13,18 +11,23 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { fetchCreditTransactions } from "@/actions/transactionActions";
+import { checkAuthentication } from "@/actions/authActions";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Transactions - Manim AI",
+  description: "View all your credit transactions and balance history",
+};
 
 export default async function TransactionsPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await checkAuthentication();
 
-  if (!session || !session.user) {
-    notFound();
+  if (!session) {
+    redirect("/login");
   }
 
   // Fetch all credit transactions for the user
-  const transactions = await fetchCreditTransactions(session.user.id);
+  const transactions = await fetchCreditTransactions(session.id);
   if (!transactions) {
     notFound();
   }
