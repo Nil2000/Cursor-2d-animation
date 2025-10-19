@@ -22,6 +22,8 @@ import {
   IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
+import { authClient } from "@/lib/auth-client";
+import { UserInfoType } from "@/lib/types";
 
 type FooterUserProps = {
   userInfo: UserInfoType;
@@ -87,7 +89,11 @@ export default function FooterUser({ userInfo }: FooterUserProps) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                await authClient.signOut();
+              }}
+            >
               <IconLogout className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>

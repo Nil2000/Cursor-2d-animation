@@ -17,7 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ChevronDown, PenBox } from "lucide-react";
+import { ChevronDown, PenBox, CreditCard } from "lucide-react";
 import Link from "next/link";
 import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
@@ -29,7 +29,8 @@ type ChatSidebarProps = {
 };
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
-  const { limit, setLimit, history } = useChatHook();
+  const { limit, setLimit, history, usersCredits, isUserPremium } =
+    useChatHook();
 
   return (
     <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
@@ -39,7 +40,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
       <SidebarContent className="px-2">
         <SidebarMenu>
           <SidebarMenuItem className="mx-2">
-            <Link href={"/"}>
+            <Link href={"/chat"}>
               <SidebarMenuButton className="cursor-pointer h-10">
                 <PenBox className="mr-2 h-4 w-4" />
                 New Chat
@@ -74,7 +75,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
                 )}
                 <Button
                   variant={"link"}
-                  className="text-muted-foreground hover:text-primary w-full"
+                  className="text-muted-foreground hover:text-primary w-full cursor-pointer"
                   onClick={() => {
                     setLimit(limit + 5);
                   }}
@@ -87,7 +88,10 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
         </Collapsible>
       </SidebarContent>
       <SidebarFooter>
-        <FooterCredits />
+        <FooterCredits
+          usersCredits={usersCredits}
+          isUserPremium={isUserPremium}
+        />
         <FooterUser userInfo={userInfo} />
       </SidebarFooter>
     </Sidebar>

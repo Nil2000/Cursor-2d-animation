@@ -1,6 +1,14 @@
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  pgEnum,
+  real,
+  integer,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -10,6 +18,8 @@ export const user = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
+  credits: integer("credits").notNull().default(0),
+  isPremium: boolean("is_premium").default(false),
 });
 
 export const session = pgTable("session", {
@@ -61,11 +71,7 @@ export const chatVideoStatus = pgEnum("chat_video_status", [
   "failed",
 ]);
 
-export const videoQuality = pgEnum("video_quality", [
-  "high",
-  "medium",
-  "low",
-]);
+export const videoQuality = pgEnum("video_quality", ["high", "medium", "low"]);
 
 export const chat_space = pgTable("chat_space", {
   id: text("id")
@@ -111,8 +117,10 @@ export const chat_video = pgTable("chat_video", {
   url: text("url"),
   status: chatVideoStatus().default("pending"),
   quality: videoQuality().notNull(),
+  creditsCost: integer("credits_cost").notNull().default(1),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
+
   chatId: text("chat_id")
     .notNull()
     .references(() => chat.id, { onDelete: "cascade" }),
@@ -128,3 +136,134 @@ export const chat_video_chat_relation = relations(chat_video, ({ one }) => ({
     references: [chat.id],
   }),
 }));
+
+// payment status enum
+export const paymentStatus = pgEnum("payment_status", [
+  "pending",
+  "completed",
+  "failed",
+]);
+
+// payment history table
+export const paymentHistory = pgTable("payment_history", {
+  paymentId: text("payment_id").primaryKey(),
+  status: paymentStatus().notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  amount: real().notNull(),
+  currency: text("currency").notNull(),
+  cfPaymentId: text("cf_payment_id"),
+  bankReference: text("bank_reference"),
+  creditsAdded: integer("credits_added").notNull(),
+
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
+// one to many relation user to payment history
+export const user_payment_history_relation = relations(user, ({ many }) => ({
+  paymentHistory: many(paymentHistory),
+}));
+
+export const payment_history_user_relation = relations(
+  paymentHistory,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [paymentHistory.userId],
+      references: [user.id],
+    }),
+  })
+);
+
+// Credit transaction types
+export const creditTransactionType = pgEnum("credit_transaction_type", [
+  "purchase", // Credits added via payment
+  "video_generation", // Credits deducted for video
+  "refund", // Credits refunded
+  "bonus", // Free credits/promotions
+]);
+
+// Transactional status enum
+export const transactionalStatus = pgEnum("transactional_status", [
+  "pending",
+  "completed",
+  "failed",
+]);
+
+// Credit transaction history table
+export const creditTransaction = pgTable("credit_transaction", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  type: creditTransactionType().notNull(),
+  amount: integer("amount").notNull(), // positive for additions, negative for deductions
+  balanceAfter: integer("balance_after").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull(),
+  transactionalStatus: transactionalStatus().notNull().default("pending"),
+
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+
+  // Optional references to link transactions to their source
+  paymentId: text("payment_id").references(() => paymentHistory.paymentId, {
+    onDelete: "cascade",
+  }),
+  chatId: text("chat_id").references(() => chat.id, {
+    onDelete: "cascade",
+  }),
+});
+
+// Relations for credit transactions
+export const user_credit_transactions_relation = relations(
+  user,
+  ({ many }) => ({
+    creditTransactions: many(creditTransaction),
+  })
+);
+
+export const credit_transaction_user_relation = relations(
+  creditTransaction,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [creditTransaction.userId],
+      references: [user.id],
+    }),
+  })
+);
+
+export const credit_transaction_payment_relation = relations(
+  creditTransaction,
+  ({ one }) => ({
+    payment: one(paymentHistory, {
+      fields: [creditTransaction.paymentId],
+      references: [paymentHistory.paymentId],
+    }),
+  })
+);
+
+export const credit_transaction_chat_relation = relations(
+  creditTransaction,
+  ({ one }) => ({
+    chat: one(chat, {
+      fields: [creditTransaction.chatId],
+      references: [chat.id],
+    }),
+  })
+);
+
+export const payment_history_credit_transactions_relation = relations(
+  paymentHistory,
+  ({ many }) => ({
+    creditTransactions: many(creditTransaction),
+  })
+);
+
+export const chat_credit_transactions_relation = relations(
+  chat,
+  ({ many }) => ({
+    creditTransactions: many(creditTransaction),
+  })
+);

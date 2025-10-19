@@ -16,6 +16,7 @@ import {
 } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import VideoDialogShowCase from "./video-showcase-dialog";
+import { useChatHook } from "@/components/providers/chat-provider";
 
 type Props = {
   chatId: string;
@@ -45,6 +46,7 @@ export default function ChatPageV2({
   const abortController = React.useRef<AbortController | null>(null);
   const pollingIntervals = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   const router = useRouter();
+  const { usersCredits, creditsLoading, refetchCredits } = useChatHook();
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -61,9 +63,18 @@ export default function ChatPageV2({
     );
   }, [messages]);
 
+  // Check if user has credits
+  const canSendMessage = React.useMemo(() => {
+    return usersCredits > 0;
+  }, [usersCredits]);
+
   // Check if we can show retry button (last message is from assistant and has failed video generation)
   const canRetry = React.useMemo(() => {
     if (messages.length < 2 || loading) return false;
+
+    // Check if user has credits
+    if (usersCredits === 0) return false;
+
     const lastMessage = messages[messages.length - 1];
 
     // Only show retry if last message is from assistant and has failed video generation
@@ -75,7 +86,7 @@ export default function ChatPageV2({
     );
 
     return hasFailedVideos || false;
-  }, [messages, loading]);
+  }, [messages, loading, usersCredits]);
 
   const pollVideoStatus = React.useCallback(async (videoId: string) => {
     try {
@@ -132,6 +143,8 @@ export default function ChatPageV2({
         clearInterval(interval);
         pollingIntervals.current.delete(videoId);
       }
+    } finally {
+      refetchCredits();
     }
   }, []);
 
@@ -338,6 +351,8 @@ export default function ChatPageV2({
         for (const video of streamMetadata.videos) {
           startVideoPolling(video.id);
         }
+        // Refetch credits after video generation is initiated
+        refetchCredits();
       }
     } catch (error) {
       console.log("error", error);
@@ -357,6 +372,9 @@ export default function ChatPageV2({
 
   const handleSendMessage = async (input: string) => {
     if (!input || input.trim().length === 0) {
+      return;
+    }
+    if (usersCredits === 0) {
       return;
     }
     const userInput = {
@@ -406,6 +424,11 @@ export default function ChatPageV2({
   };
 
   const handleRetry = async () => {
+    // Check credits before retrying
+    if (usersCredits === 0) {
+      return;
+    }
+
     setLoading(true);
 
     if (abortController.current) {
@@ -537,6 +560,12 @@ export default function ChatPageV2({
       </div>
       <div className="absolute bottom-0 flex justify-center w-full px-6 py-2 mr-2 gap-4 z-10">
         <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
+          {!canSendMessage && !creditsLoading && (
+            <div className="text-xs text-red-500 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-md border border-red-200 dark:border-red-900">
+              ⚠️ No credits available. Please purchase more credits to continue
+              generating videos.
+            </div>
+          )}
           <TextComponent
             onChange={(value: string) => setInputText(value)}
             value={inputText}
@@ -547,12 +576,16 @@ export default function ChatPageV2({
               }
             }}
             ref={inputContainerRef}
+            disabled={!canSendMessage}
           />
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end items-center gap-2">
             <Button
               size={"icon"}
               onClick={() => handleSendMessage(inputText)}
-              disabled={!inputText || loading || hasPendingVideos}
+              disabled={
+                !inputText || loading || hasPendingVideos || !canSendMessage
+              }
+              title={!canSendMessage ? "No credits available" : ""}
             >
               <Send size={16} />
             </Button>

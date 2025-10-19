@@ -8,7 +8,7 @@ import { getPythonBlockCodeFromMessage } from "@/lib/chat-utils/getPythonBlockCo
 import { getTitleFromMessage } from "@/lib/chat-utils/getTitleFromMessage";
 import { sendToQueue } from "@/lib/queue-utils/sendToQueue";
 import { db } from "@/lib/db";
-import { chat, chat_video } from "@/lib/schema";
+import { chat, chat_video, user, creditTransaction } from "@/lib/schema";
 import { Messages, Role } from "@/lib/types";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -27,6 +27,33 @@ export async function POST(req: NextRequest) {
 
   if (!chatId) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  // Check user credits and premium status
+  const userData = await db
+    .select({
+      credits: user.credits,
+      isPremium: user.isPremium,
+    })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+    .limit(1);
+
+  if (!userData || userData.length === 0) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const { credits, isPremium } = userData[0];
+
+  // Validate credits: user must be premium or have credits > 0
+  if (!isPremium && credits <= 0) {
+    return NextResponse.json(
+      {
+        error:
+          "Insufficient credits. Please purchase more credits to continue.",
+      },
+      { status: 403 }
+    );
   }
 
   try {
@@ -127,6 +154,48 @@ export async function POST(req: NextRequest) {
               id: video.id,
               quality: video.quality,
             }));
+
+            // Deduct credits immediately for non-premium users to prevent race conditions
+            if (!isPremium) {
+              await db.transaction(async (tx) => {
+                const currentUserCredits = await tx
+                  .select({ credits: user.credits })
+                  .from(user)
+                  .where(eq(user.id, session.user.id))
+                  .limit(1);
+
+                if (currentUserCredits.length > 0) {
+                  // Calculate total cost for all videos
+                  const totalCost = newChatVideos.reduce(
+                    (sum, video) => sum + video.creditsCost,
+                    0
+                  );
+                  const newBalance = currentUserCredits[0].credits - totalCost;
+
+                  // Deduct credits immediately
+                  await tx
+                    .update(user)
+                    .set({ credits: newBalance })
+                    .where(eq(user.id, session.user.id));
+
+                  // Create transaction record with pending status (will be updated to completed/failed later)
+                  await tx.insert(creditTransaction).values({
+                    userId: session.user.id,
+                    type: "video_generation",
+                    amount: -totalCost,
+                    balanceAfter: newBalance,
+                    description: `Video generation retry for chat ${responseChatId} (${newChatVideos.length} videos)`,
+                    chatId: responseChatId,
+                    createdAt: new Date(),
+                    transactionalStatus: "pending",
+                  });
+
+                  console.log(
+                    `Deducted ${totalCost} credits immediately for retry. New balance: ${newBalance}`
+                  );
+                }
+              });
+            }
 
             // Add to queue for processing - send all video IDs with quality info
             await sendToQueue(codeBlock, videoQualityMap, responseChatId);

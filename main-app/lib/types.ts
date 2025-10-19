@@ -35,3 +35,32 @@ export enum Role {
   Assistant = "assistant",
   User = "user",
 }
+
+export type CreditsType = {
+  credits: number;
+  isPremium: boolean;
+};
+
+// Pricing Types
+export type BillingPeriod = "monthly" | "yearly";
+
+export interface PricingPlan {
+  name: string;
+  description: string;
+  price: {
+    monthly: number;
+    yearly: number;
+  };
+  icon: React.ReactNode;
+  features: readonly string[];
+  popular?: boolean;
+  cta: string;
+  highlight?: boolean;
+}
+
+export interface CreditPackage {
+  credits: number;
+  price: number;
+  popular?: boolean;
+  bonus?: number;
+}
