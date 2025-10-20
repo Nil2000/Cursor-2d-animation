@@ -9,7 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    working-directory: ./main-app
+    defaults:
+      run:
+        working-directory: main-app
 
     steps:
       - uses: actions/checkout@v4
