@@ -2,7 +2,6 @@ import { Card } from "@/components/ui/card";
 import React from "react";
 import MachineLogo from "./machine-logo";
 import MarkedownRendered from "@/components/markdown-renderer";
-import { useTheme } from "next-themes";
 import { ClientMessageVideoType } from "@/lib/types";
 import VideoMessage from "@/components/video-showcase";
 
@@ -19,20 +18,18 @@ const AssistantBubble = React.memo(function AssistantBubble({
   chat_videos,
   onVideoClick,
 }: Props) {
-  const { theme } = useTheme();
-  
   // Handler to pass all videos when any video is clicked
   const handleVideoClick = React.useCallback(() => {
     if (chat_videos && onVideoClick) {
       onVideoClick(chat_videos);
     }
   }, [chat_videos, onVideoClick]);
-  
+
   // Show only medium quality video card (default)
   const mediumQualityVideo = React.useMemo(() => {
     return chat_videos?.find((video) => video.quality === "medium");
   }, [chat_videos]);
-  
+
   return (
     <div className="flex justify-start items-end gap-2">
       <MachineLogo />

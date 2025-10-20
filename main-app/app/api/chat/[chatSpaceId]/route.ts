@@ -1,6 +1,4 @@
-import { addChatToSpace } from "@/lib/chat-utils/spaceActions";
 import { db } from "@/lib/db";
-import { chat } from "@/lib/schema";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(

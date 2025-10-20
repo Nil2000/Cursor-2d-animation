@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getProducer } from "./queueProducer";
 
 export async function sendToQueue(

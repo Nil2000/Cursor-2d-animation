@@ -20,11 +20,6 @@ export default async function page({
   const chatSpace = await fetchChatSpaceIfExists(chatId);
 
   return (
-    <ChatPageV2
-      chatId={chatId}
-      spaceExists={!!chatSpace}
-      userInfo={session}
-      chatTitle={chatSpace?.title || ""}
-    />
+    <ChatPageV2 chatId={chatId} spaceExists={!!chatSpace} userInfo={session} />
   );
 }

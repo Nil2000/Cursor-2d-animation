@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { ClientMessageVideoType } from "@/lib/types";
 import { ShimmeringText } from "./shimmering-text";
 
-export const VideoMessage = memo(
+const VideoMessage = memo(
   ({
     video,
     onVideoClick,
@@ -37,5 +37,7 @@ export const VideoMessage = memo(
     );
   }
 );
+
+VideoMessage.displayName = "VideoMessage";
 
 export default VideoMessage;
