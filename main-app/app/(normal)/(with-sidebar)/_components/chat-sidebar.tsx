@@ -17,7 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ChevronDown, PenBox, CreditCard } from "lucide-react";
+import { ChevronDown, PenBox } from "lucide-react";
 import Link from "next/link";
 import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";

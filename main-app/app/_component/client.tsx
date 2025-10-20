@@ -3,7 +3,6 @@ import { Spotlight } from "@/components/ui/spotlight-new";
 import React from "react";
 import Navbar from "./navbar";
 import HeroSection from "@/components/hero-section";
-import TextInputContainer from "./text-input-container";
 import { useTheme } from "next-themes";
 import { authClient } from "@/lib/auth-client";
 

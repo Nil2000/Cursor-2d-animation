@@ -1,11 +1,6 @@
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import React from "react";
 import { ChatSidebar } from "./_components/chat-sidebar";
-import ThemeButton from "@/components/theme-button";
 import ChatNavbar from "./_components/chat-navbar";
 import { cookies, headers } from "next/headers";
 import { ChatPageProvider } from "@/components/providers/chat-provider";

@@ -29,16 +29,6 @@ export default function VideoDialogShowCase({
     return videos.find((v) => v.quality === selectedQuality);
   }, [videos, selectedQuality]);
 
-  // Sort videos by quality order: high, medium, low
-  const sortedVideos = React.useMemo(() => {
-    const qualityOrder = { high: 1, medium: 2, low: 3 };
-    return [...videos].sort(
-      (a, b) =>
-        (qualityOrder[a.quality as keyof typeof qualityOrder] || 999) -
-        (qualityOrder[b.quality as keyof typeof qualityOrder] || 999)
-    );
-  }, [videos]);
-
   // Reset to medium quality when dialog opens
   React.useEffect(() => {
     if (showDialog) {

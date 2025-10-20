@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React from "react";
 import Markdown from "react-markdown";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { Button } from "./ui/button";
-import { Copy, CopyCheck } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Roboto_Mono } from "next/font/google";
 
@@ -57,7 +59,6 @@ export default function MarkedownRendered({
               <SyntaxHighlighter
                 {...props}
                 PreTag="div"
-                children={codeContent}
                 language={match ? match[1] : "text"}
                 style={atomOneDark}
                 customStyle={{
@@ -79,7 +80,9 @@ export default function MarkedownRendered({
                     wordBreak: isWrapped ? "break-word" : "keep-all",
                   },
                 }}
-              />
+              >
+                {codeContent}
+              </SyntaxHighlighter>
             </div>
           ) : (
             <code

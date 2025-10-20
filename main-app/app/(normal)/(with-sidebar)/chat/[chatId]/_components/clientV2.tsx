@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
-import { Loader, Send, RotateCcw } from "lucide-react";
+import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,15 +22,9 @@ type Props = {
   chatId: string;
   spaceExists: boolean;
   userInfo: UserInfoType;
-  chatTitle?: string;
 };
 
-export default function ChatPageV2({
-  chatId,
-  spaceExists,
-  userInfo,
-  chatTitle,
-}: Props) {
+export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState<boolean>(
@@ -88,65 +82,68 @@ export default function ChatPageV2({
     return hasFailedVideos || false;
   }, [messages, loading, usersCredits]);
 
-  const pollVideoStatus = React.useCallback(async (videoId: string) => {
-    try {
-      const response = await fetch(`/api/video_status/${videoId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  const pollVideoStatus = React.useCallback(
+    async (videoId: string) => {
+      try {
+        const response = await fetch(`/api/video_status/${videoId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      const videoStatus = await response.json();
+        const videoStatus = await response.json();
 
-      // Update the message with the new video status
-      setMessages((prev) =>
-        prev.map((msg) => ({
-          ...msg,
-          chat_videos: msg.chat_videos?.map((video) =>
-            video.id === videoId
-              ? { ...video, status: videoStatus.status, url: videoStatus.url }
-              : video
-          ),
-        }))
-      );
+        // Update the message with the new video status
+        setMessages((prev) =>
+          prev.map((msg) => ({
+            ...msg,
+            chat_videos: msg.chat_videos?.map((video) =>
+              video.id === videoId
+                ? { ...video, status: videoStatus.status, url: videoStatus.url }
+                : video
+            ),
+          }))
+        );
 
-      // If video is completed or failed, stop polling
-      if (
-        videoStatus.status === "completed" ||
-        videoStatus.status === "failed"
-      ) {
+        // If video is completed or failed, stop polling
+        if (
+          videoStatus.status === "completed" ||
+          videoStatus.status === "failed"
+        ) {
+          const interval = pollingIntervals.current.get(videoId);
+          if (interval) {
+            clearInterval(interval);
+            pollingIntervals.current.delete(videoId);
+          }
+          console.log(
+            `Video ${videoId} polling stopped. Status: ${videoStatus.status}`
+          );
+        }
+      } catch (error) {
+        console.error(`Error polling video status for ${videoId}:`, error);
+
+        // On error, mark video as failed and stop polling
+        setMessages((prev) =>
+          prev.map((msg) => ({
+            ...msg,
+            chat_videos: msg.chat_videos?.map((video) =>
+              video.id === videoId
+                ? { ...video, status: "failed" as const }
+                : video
+            ),
+          }))
+        );
+
         const interval = pollingIntervals.current.get(videoId);
         if (interval) {
           clearInterval(interval);
           pollingIntervals.current.delete(videoId);
         }
-        console.log(
-          `Video ${videoId} polling stopped. Status: ${videoStatus.status}`
-        );
+      } finally {
+        refetchCredits();
       }
-    } catch (error) {
-      console.error(`Error polling video status for ${videoId}:`, error);
-
-      // On error, mark video as failed and stop polling
-      setMessages((prev) =>
-        prev.map((msg) => ({
-          ...msg,
-          chat_videos: msg.chat_videos?.map((video) =>
-            video.id === videoId
-              ? { ...video, status: "failed" as const }
-              : video
-          ),
-        }))
-      );
-
-      const interval = pollingIntervals.current.get(videoId);
-      if (interval) {
-        clearInterval(interval);
-        pollingIntervals.current.delete(videoId);
-      }
-    } finally {
-      refetchCredits();
-    }
-  }, []);
+    },
+    [refetchCredits]
+  );
 
   const startVideoPolling = React.useCallback(
     (videoId: string) => {
@@ -490,7 +487,7 @@ export default function ChatPageV2({
 
   React.useEffect(() => {
     init();
-  }, [chatId, spaceExists]);
+  }, [chatId, spaceExists, init]);
 
   React.useEffect(() => {
     scrollToBottom();

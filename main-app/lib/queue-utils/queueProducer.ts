@@ -1,7 +1,8 @@
-import { Kafka } from "kafkajs";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Kafka, Producer } from "kafkajs";
 
 let kafka_client: Kafka | null = null;
-let producer: any = null;
+let producer: Producer | null = null;
 
 export const getProducer = async () => {
   if (producer) {
@@ -22,5 +23,6 @@ export const getProducer = async () => {
   } catch (error: any) {
     console.error("Error creating Kafka producer:", error.message);
     console.log(error.stack);
+    throw error;
   }
 };

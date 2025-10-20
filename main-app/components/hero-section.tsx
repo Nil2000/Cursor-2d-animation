@@ -1,9 +1,8 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import TextInputContainer from "@/app/_component/text-input-container";
 import { Button } from "./ui/button";
-import { ArrowRight, ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 
 export default function HeroSection({
@@ -158,7 +157,7 @@ export default function HeroSection({
             Effortlessly collect, manage, and showcase testimonials with
             beautiful,
             <br />
-            customizable pages that boost your product's credibility.
+            customizable pages that boost your product&apos;s credibility.
           </motion.p>
         </>
       )}

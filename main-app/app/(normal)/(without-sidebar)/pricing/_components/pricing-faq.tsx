@@ -62,9 +62,7 @@ export function PricingFAQ() {
 
   const toggleItem = (index: number) => {
     setOpenItems((prev) =>
-      prev.includes(index)
-        ? prev.filter((i) => i !== index)
-        : [...prev, index]
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
   };
 
@@ -75,7 +73,8 @@ export function PricingFAQ() {
           Frequently Asked Questions
         </h2>
         <p className="text-muted-foreground">
-          Have questions? We've got answers. Can't find what you're looking for?{" "}
+          Have questions? We&apos;ve got answers. Can&apos;t find what
+          you&apos;re looking for?{" "}
           <a href="#" className="text-primary hover:underline">
             Contact our support team
           </a>

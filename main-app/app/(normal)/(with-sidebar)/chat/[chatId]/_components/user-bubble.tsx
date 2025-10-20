@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui/card";
 import UserAvatar from "@/components/user-avatar";
-import Image from "next/image";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
