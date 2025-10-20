@@ -68,6 +68,9 @@ export function streamTextForChat(
           }
         }
       }
+    } catch (e) {
+      console.error("Failed to stream text", e);
+      reject(e);
     } finally {
       resolve();
       reader.cancel();

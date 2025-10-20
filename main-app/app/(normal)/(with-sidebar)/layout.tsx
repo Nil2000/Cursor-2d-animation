@@ -1,11 +1,6 @@
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import React from "react";
 import { ChatSidebar } from "./_components/chat-sidebar";
-import ThemeButton from "@/components/theme-button";
 import ChatNavbar from "./_components/chat-navbar";
 import { cookies, headers } from "next/headers";
 import { ChatPageProvider } from "@/components/providers/chat-provider";
@@ -27,16 +22,16 @@ export default async function Layout({
     notFound();
   }
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <ChatSidebar userInfo={session?.user} />
-      <SidebarInset>
-        <main className="flex flex-col min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
-          <ChatPageProvider>
+    <ChatPageProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <ChatSidebar userInfo={session?.user} />
+        <SidebarInset>
+          <main className="flex flex-col min-h-[calc(100vh-1rem)] overflow-hidden relative flex-1">
             <ChatNavbar />
             {children}
-          </ChatPageProvider>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </ChatPageProvider>
   );
 }
