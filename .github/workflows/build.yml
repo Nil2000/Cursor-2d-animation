@@ -12,13 +12,14 @@ jobs:
     defaults:
       run:
         working-directory: main-app
-    env:
-      DATABASE_URL: postgresql://postgres:password@localhost:5432/mydb
 
     steps:
       - uses: actions/checkout@v4
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+
+      - name: Load env
+        run: cp .env.example .env
 
       - name: Install dependencies
         run: bun install
