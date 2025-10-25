@@ -25,7 +25,6 @@ jobs:
         run: bun install
 
       - name: Drizzle generate
-
         run: bun run db:generate
 
       - name: Build
