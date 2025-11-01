@@ -3,19 +3,16 @@ import { runCodeInDocker } from "./sandbox/runCodeInDocker";
 export async function processMessage(message: string) {
   console.log("Processing message:", message);
 
-  // Convert buffer to string if needed
-  const { key, value } = JSON.parse(message);
-  if (!key || !value) {
-    throw new Error("Invalid message format: key and value are required");
+  // Parse Redis message format (simple JSON string)
+  const { chatId, code, videos } = JSON.parse(message);
+  
+  if (!chatId || !code || !videos) {
+    throw new Error("Invalid message format: chatId, code, and videos are required");
   }
-  const utf16Decoder = new TextDecoder("utf-8");
 
-  const decodedKey = utf16Decoder.decode(Buffer.from(key.data));
-  const decodedValue = utf16Decoder.decode(Buffer.from(value.data));
-  console.log("Message key:", decodedKey);
-  console.log("Message value:", decodedValue);
-
-  const { code, videos } = JSON.parse(decodedValue);
+  console.log("Message chatId:", chatId);
+  console.log("Message code:", code);
+  console.log("Message videos:", videos);
 
   try {
     // Run the code in Docker container
@@ -28,7 +25,7 @@ export async function processMessage(message: string) {
     }
 
     // Update the video status in the API
-    console.log("Updating video status for chatId:", decodedKey);
+    console.log("Updating video status for chatId:", chatId);
     console.log("API URL:", `${process.env.API_URL}/video_status`);
     console.log("Upload status URLs:", status.uploadUrls);
 
@@ -44,7 +41,7 @@ export async function processMessage(message: string) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          chatId: decodedKey,
+          chatId: chatId,
           videoUrls: status.uploadUrls.map((upload: any) => ({
             id: upload.id,
             url: upload.url,
@@ -80,7 +77,7 @@ export async function processMessage(message: string) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          chatId: decodedKey,
+          chatId: chatId,
           videoUrls: videos.map((video: any) => ({
             id: video.id,
             url: "",

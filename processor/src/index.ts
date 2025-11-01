@@ -2,7 +2,7 @@ import { processMessage } from "./processMessage";
 import { startConsumingMessages } from "./queue";
 
 startConsumingMessages({
-  topic: process.env.KAFKA_TOPIC || "default-topic",
+  queueName: process.env.REDIS_QUEUE_NAME || "manim-queue",
   onMessage: async (message) => {
     processMessage(message);
   },

@@ -7,14 +7,14 @@ WORKDIR /app
 #Install dependecies
 FROM base AS install
 RUN mkdir -p /temp/prod
-COPY package.json bun.lock /temp/prod/
+COPY main-app/package.json main-app/bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile
 
 # Copy node_modules from temp directory
 FROM base AS builder
 WORKDIR /app
 COPY --from=install /temp/prod/node_modules node_modules
-COPY . .
+COPY main-app/. .
 
 # Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED=1

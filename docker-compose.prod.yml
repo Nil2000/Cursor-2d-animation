@@ -1,0 +1,8 @@
+services:
+  main-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mainapp
+    image: main-app:latest
+    ports:
+      - "3000:3000"
