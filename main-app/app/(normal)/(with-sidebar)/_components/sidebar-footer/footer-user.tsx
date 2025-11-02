@@ -14,8 +14,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, DollarSign, Receipt } from "lucide-react";
 import React from "react";
+import Link from "next/link";
 import {
   IconCreditCard,
   IconLogout,
@@ -75,17 +76,23 @@ export default function FooterUser({ userInfo }: FooterUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <IconUserCircle className="mr-2 h-4 w-4" />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href={"/pricing"}>
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Pricing
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconCreditCard className="mr-2 h-4 w-4" />
-                Billing
+              <DropdownMenuItem asChild>
+                <Link href={"/payments"}>
+                  <IconCreditCard className="mr-2 h-4 w-4" />
+                  Payments
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconNotification className="mr-2 h-4 w-4" />
-                Notifications
+              <DropdownMenuItem asChild>
+                <Link href={"/transactions"}>
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Transactions
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
