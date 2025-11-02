@@ -467,7 +467,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       const message = getLastMessageFromLocalStorage();
 
       if (!message) {
-        router.push("/");
+        router.push("/chat");
         console.log("no message");
         return;
       }
@@ -487,7 +487,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
   React.useEffect(() => {
     init();
-  }, [chatId, spaceExists, init]);
+  }, []);
 
   React.useEffect(() => {
     scrollToBottom();
@@ -516,7 +516,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         }
       });
     });
-  }, [messages, startVideoPolling]);
+  }, [messages]);
 
   if (spaceLoading) {
     return (
