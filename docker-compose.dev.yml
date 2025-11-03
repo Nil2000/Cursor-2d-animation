@@ -23,14 +23,8 @@ services:
       /usr/bin/mc anonymous set public minio/manim/public;
       exit 0;
       "
-  # Redis queue for Manim integration
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
+  # QStash is used instead of Redis for queue management
+  # No local queue service needed as QStash is a cloud service
 
   # Database for Manim integration
   db:
@@ -47,4 +41,3 @@ services:
 volumes:
   s3_data:
   db_data:
-  redis_data:
