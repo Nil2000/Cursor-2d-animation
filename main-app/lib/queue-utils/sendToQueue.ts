@@ -7,9 +7,9 @@ export async function sendToQueue(
   chatId: string
 ) {
   try {
-    // Send message to QStash queue
+    // Send message to Redis queue
     await pushToQueue(
-      process.env.QSTASH_TOPIC_NAME || "manim-queue",
+      process.env.REDIS_QUEUE_NAME || "manim-queue",
       {
         chatId,
         code: message,

@@ -2,7 +2,7 @@ import { processMessage } from "./processMessage";
 import { startConsumingMessages } from "./queue";
 
 startConsumingMessages({
-  queueName: process.env.QSTASH_TOPIC_NAME || "manim-queue",
+  queueName: process.env.REDIS_QUEUE_NAME || "manim-queue",
   onMessage: async (message) => {
     processMessage(message);
   },

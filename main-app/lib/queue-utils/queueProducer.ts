@@ -1,38 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Client } from "@upstash/qstash";
+import Redis from "ioredis";
 
-let qstash_client: Client | null = null;
+let redis_client: Redis | null = null;
 
-export const getQStashClient = async () => {
-  if (qstash_client) {
-    return qstash_client;
+export const getRedisClient = async () => {
+  if (redis_client) {
+    return redis_client;
   }
 
   try {
-    if (!process.env.QSTASH_TOKEN) {
-      throw new Error("QSTASH_TOKEN must be set");
+    if (!process.env.REDIS_URL) {
+      throw new Error("REDIS_URL must be set");
     }
 
-    qstash_client = new Client({
-      token: process.env.QSTASH_TOKEN,
-    });
+    redis_client = new Redis(process.env.REDIS_URL);
 
-    console.log("Connected to QStash");
-    return qstash_client;
+    console.log("Connected to Redis");
+    return redis_client;
   } catch (error: any) {
-    console.error("Error creating QStash client:", error.message);
+    console.error("Error creating Redis client:", error.message);
     console.log(error.stack);
     throw error;
   }
 };
 
 export const pushToQueue = async (queueName: string, message: any) => {
-  const client = await getQStashClient();
+  const client = await getRedisClient();
   try {
-    await client.publishJSON({
-      topic: queueName,
-      content: message,
-    });
+    await client.rpush(queueName, JSON.stringify(message));
     console.log(`Message pushed to queue: ${queueName}`);
   } catch (error: any) {
     console.error("Error pushing to queue:", error.message);

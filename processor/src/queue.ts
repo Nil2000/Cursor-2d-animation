@@ -1,13 +1,17 @@
-import { Client } from "@upstash/qstash";
+import Redis from "ioredis";
 
-const getQStashClient = () => {
-  if (!process.env.QSTASH_TOKEN) {
-    throw new Error("QSTASH_TOKEN must be set");
+let redisClient: Redis | null = null;
+
+const getRedisClient = () => {
+  if (!process.env.REDIS_URL) {
+    throw new Error("REDIS_URL must be set");
   }
 
-  return new Client({
-    token: process.env.QSTASH_TOKEN,
-  });
+  if (!redisClient) {
+    redisClient = new Redis(process.env.REDIS_URL);
+  }
+
+  return redisClient;
 };
 
 type Props = {
@@ -19,42 +23,29 @@ export const startConsumingMessages = async ({
   queueName,
   onMessage,
 }: Props) => {
-  const client = getQStashClient();
+  const client = getRedisClient();
 
-  console.log("Connected to QStash");
+  console.log("Connected to Redis");
   console.log(`Started consuming messages from queue: ${queueName}`);
 
-  // QStash uses HTTP endpoints for message consumption
-  // This requires setting up a receiver endpoint
-  // For now, we'll implement a polling approach using QStash's message API
   while (true) {
     try {
-      // Get messages from the topic/queue
-      const messages = await client.messages.get({
-        topic: queueName,
-      });
+      // Use BLPOP for blocking queue consumption
+      const result = await client.blpop(queueName, 10); // 10 second timeout
+      
+      if (result) {
+        const [, message] = result;
+        console.log({
+          queue: queueName,
+          message: message,
+        });
 
-      if (messages.length > 0) {
-        for (const message of messages) {
-          console.log({
-            queue: queueName,
-            messageId: message.messageId,
-            message: message.body,
+        if (message) {
+          await onMessage(message).catch((error) => {
+            console.error("Error processing message:", error.message);
+            console.log(error.stack);
           });
-
-          if (message.body) {
-            await onMessage(message.body).catch((error) => {
-              console.error("Error processing message:", error.message);
-              console.log(error.stack);
-            });
-          }
-
-          // Acknowledge the message to remove it from the queue
-          await client.messages.delete(message.messageId);
         }
-      } else {
-        // No messages, wait before polling again
-        await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     } catch (error: any) {
       console.error("Error in queue consumption:", error.message);

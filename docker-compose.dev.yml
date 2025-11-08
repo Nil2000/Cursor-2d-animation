@@ -1,4 +1,5 @@
 services:
+  # Object Storage
   minio:
     image: quay.io/minio/minio
     command: server /data --console-address ":9001"
@@ -10,6 +11,7 @@ services:
       MINIO_ROOT_PASSWORD: minio123
     volumes:
       - s3_data:/data
+
   # This service just make sure a bucket with the right policies is created
   createbuckets:
     image: minio/mc
@@ -23,8 +25,16 @@ services:
       /usr/bin/mc anonymous set public minio/manim/public;
       exit 0;
       "
-  # QStash is used instead of Redis for queue management
-  # No local queue service needed as QStash is a cloud service
+
+  # Local redis queue
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
 
   # Database for Manim integration
   db:
@@ -41,3 +51,4 @@ services:
 volumes:
   s3_data:
   db_data:
+  redis_data:
