@@ -1,28 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Kafka, Producer } from "kafkajs";
+import Redis from "ioredis";
 
-let kafka_client: Kafka | null = null;
-let producer: Producer | null = null;
+let redis_client: Redis | null = null;
 
-export const getProducer = async () => {
-  if (producer) {
-    return producer;
+export const getRedisClient = async () => {
+  if (redis_client) {
+    return redis_client;
   }
 
   try {
-    if (!kafka_client) {
-      kafka_client = new Kafka({
-        clientId: process.env.KAFKA_CLIENT_ID || "default-client",
-        brokers: [process.env.KAFKA_BROKER || "localhost:9092"],
-      });
+    if (!process.env.REDIS_URL) {
+      throw new Error("REDIS_URL must be set");
     }
 
-    producer = kafka_client.producer();
-    await producer.connect();
-    return producer;
+    redis_client = new Redis(process.env.REDIS_URL);
+
+    console.log("Connected to Redis");
+    return redis_client;
   } catch (error: any) {
-    console.error("Error creating Kafka producer:", error.message);
+    console.error("Error creating Redis client:", error.message);
     console.log(error.stack);
+    throw error;
+  }
+};
+
+export const pushToQueue = async (queueName: string, message: any) => {
+  const client = await getRedisClient();
+  try {
+    await client.rpush(queueName, JSON.stringify(message));
+    console.log(`Message pushed to queue: ${queueName}`);
+  } catch (error: any) {
+    console.error("Error pushing to queue:", error.message);
     throw error;
   }
 };

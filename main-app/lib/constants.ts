@@ -7,7 +7,7 @@ export const OPENROUTER_CHAT_COMPLETION_URL =
 
 export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-export const MAX_TOKENS = 1000;
+export const MAX_TOKENS = 100000;
 
 export const MANIM_SYSTEM_PRESET = "@preset/preset-for-manim-application";
 

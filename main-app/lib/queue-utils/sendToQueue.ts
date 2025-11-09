@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getProducer } from "./queueProducer";
+import { pushToQueue } from "./queueProducer";
 
 export async function sendToQueue(
   message: string,
@@ -7,24 +7,15 @@ export async function sendToQueue(
   chatId: string
 ) {
   try {
-    const producer = await getProducer();
-    if (!producer) {
-      throw new Error("Producer is not initialized");
-    }
-
-    // Send a message for each video with quality info
-    await producer.send({
-      topic: process.env.KAFKA_TOPIC || "default-topic",
-      messages: [
-        {
-          key: chatId,
-          value: JSON.stringify({
-            code: message,
-            videos,
-          }),
-        },
-      ],
-    });
+    // Send message to Redis queue
+    await pushToQueue(
+      process.env.REDIS_QUEUE_NAME || "manim-queue",
+      {
+        chatId,
+        code: message,
+        videos,
+      }
+    );
   } catch (error: any) {
     console.error("Error sending message to queue:", error.message);
     console.log(error.stack);

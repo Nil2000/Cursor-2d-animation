@@ -1,0 +1,54 @@
+# Use official Bun image as base
+FROM oven/bun:1-alpine AS base
+
+# Create app directory
+WORKDIR /app
+
+#Install dependecies
+FROM base AS install
+RUN mkdir -p /temp/prod
+COPY main-app/package.json main-app/bun.lock /temp/prod/
+RUN cd /temp/prod && bun install --frozen-lockfile
+
+# Copy node_modules from temp directory
+FROM base AS builder
+WORKDIR /app
+COPY --from=install /temp/prod/node_modules node_modules
+COPY main-app/. .
+
+# Disable telemetry during the build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# build
+ENV NODE_ENV=production
+RUN bun run build
+
+# Create production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME="0.0.0.0" \
+    NEXT_TELEMETRY_DISABLED=1
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy public files
+COPY --from=builder /app/public ./public
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Run as non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Run the app
+CMD ["bun", "server.js"]
