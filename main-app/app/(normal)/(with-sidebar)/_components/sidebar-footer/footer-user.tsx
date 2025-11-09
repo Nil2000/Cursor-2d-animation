@@ -17,12 +17,7 @@ import {
 import { EllipsisVertical, DollarSign, Receipt } from "lucide-react";
 import React from "react";
 import Link from "next/link";
-import {
-  IconCreditCard,
-  IconLogout,
-  IconNotification,
-  IconUserCircle,
-} from "@tabler/icons-react";
+import { IconCreditCard, IconLogout } from "@tabler/icons-react";
 import { authClient } from "@/lib/auth-client";
 import { UserInfoType } from "@/lib/types";
 
