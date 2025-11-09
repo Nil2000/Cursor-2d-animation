@@ -1,0 +1,39 @@
+# Use official Bun image as base
+FROM oven/bun:1-alpine AS base
+
+# Install system dependencies including FFmpeg and Docker
+RUN apk add --no-cache \
+    ffmpeg \
+    python3 \
+    python3-dev \
+    py3-pip \
+    make \
+    g++ \
+    docker-cli \
+    && rm -rf /var/cache/apk/*
+
+# Install dependencies
+FROM base AS install
+RUN mkdir -p /temp/prod
+COPY processor/package.json processor/bun.lock* /temp/prod/
+RUN cd /temp/prod && bun install --frozen-lockfile --production
+
+# Copy node_modules from temp directory
+FROM base AS runner
+WORKDIR /app
+
+# Copy node_modules
+COPY --from=install /temp/prod/node_modules node_modules
+
+# Copy source code
+COPY processor/src/ ./src/
+COPY processor/tsconfig.json ./
+
+# Create temp directory for video processing
+RUN mkdir -p /app/src/sandbox/temp
+
+# Set environment variables
+ENV NODE_ENV=production
+
+# Run the application
+CMD ["bun", "run", "start"]

@@ -1,43 +1,57 @@
-import { Kafka } from "kafkajs";
+import Redis from "ioredis";
 
-const getKafkaConsumer = () => {
-  const kafka = new Kafka({
-    clientId: process.env.KAFKA_CLIENT_ID || "default-client",
-    brokers: [process.env.KAFKA_BROKER || "localhost:9092"],
-  });
-  const cosumer = kafka.consumer({
-    groupId: process.env.KAFKA_GROUP_ID || "default-group",
-  });
-  return cosumer;
+let redisClient: Redis | null = null;
+
+const getRedisClient = () => {
+  if (!process.env.REDIS_URL) {
+    throw new Error("REDIS_URL must be set");
+  }
+
+  if (!redisClient) {
+    redisClient = new Redis(process.env.REDIS_URL);
+  }
+
+  return redisClient;
 };
 
 type Props = {
-  topic: string;
+  queueName: string;
   onMessage: (message: string) => Promise<void>;
 };
 
-export const startConsumingMessages = async ({ topic, onMessage }: Props) => {
-  const consumer = getKafkaConsumer();
-  await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: false });
+export const startConsumingMessages = async ({
+  queueName,
+  onMessage,
+}: Props) => {
+  const client = getRedisClient();
 
-  await consumer.run({
-    eachMessage: async ({ topic, partition, message }) => {
-      console.log({
-        offset: message.offset,
-        value: JSON.stringify(message),
-        topic,
-        partition,
-      });
+  console.log("Connected to Redis");
+  console.log(`Started consuming messages from queue: ${queueName}`);
 
-      if (message.value) {
-        onMessage(JSON.stringify(message)).catch((error) => {
-          console.error("Error processing message:", error.message);
-          console.log(error.stack);
+  while (true) {
+    try {
+      // Use BLPOP for blocking queue consumption
+      const result = await client.blpop(queueName, 10); // 10 second timeout
+      
+      if (result) {
+        const [, message] = result;
+        console.log({
+          queue: queueName,
+          message: message,
         });
-      }
-    },
-  });
 
-  console.log(`Started consuming messages from topic: ${topic}`);
+        if (message) {
+          await onMessage(message).catch((error) => {
+            console.error("Error processing message:", error.message);
+            console.log(error.stack);
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error("Error in queue consumption:", error.message);
+      console.log(error.stack);
+      // Wait a bit before retrying
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
 };
