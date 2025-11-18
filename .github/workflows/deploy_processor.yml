@@ -16,13 +16,13 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Login to ghcr
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u nilabhra --password-stdin
+        run: echo ${{ secrets.GH_TOKEN }} | docker login ghcr.io -u nilabhra --password-stdin
 
       - name: Build and push
-        run: docker build -t ghcr.io/nilabhra/cursor-for-2d-animations/processor:latest . -f docker/Dockerfile.processor
+        run: docker build -t ghcr.io/nilabhra/cursor-for-2d-animations/processor-prod:latest . -f docker/Dockerfile.processor
 
       - name: Push to ghcr
-        run: docker push ghcr.io/nilabhra/cursor-for-2d-animations/processor:latest
+        run: docker push ghcr.io/nilabhra/cursor-for-2d-animations/processor-prod:latest
 
   # Deploy to VPS
   deploy:
