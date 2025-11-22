@@ -3,6 +3,12 @@ on:
   push:
     branches:
       - "deploy_workflow"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you deploying?"
+        required: false
+        default: "Manual deploy"
 
 jobs:
   # Build and push to ghcr
