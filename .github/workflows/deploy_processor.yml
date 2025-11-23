@@ -2,7 +2,7 @@ name: Deploy processor
 on:
   push:
     branches:
-      - "deploy_workflow"
+      - "deploy"
   workflow_dispatch:
     inputs:
       reason:
