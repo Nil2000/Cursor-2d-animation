@@ -11,7 +11,7 @@ services:
 
   # processor
   processor:
-    image: ghcr.io/nilabhra/cursor-for-2d-animations/processor-prod:latest
+    image: ghcr.io/nil2000/cursor-for-2d-animations/processor-prod:latest
     container_name: processor
     environment:
       - REDIS_URL=redis://redis:6379
