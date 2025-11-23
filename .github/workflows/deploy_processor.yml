@@ -3,6 +3,12 @@ on:
   push:
     branches:
       - "deploy"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you deploying?"
+        required: false
+        default: "Manual deploy"
 
 jobs:
   # Build and push to ghcr
@@ -16,37 +22,38 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Login to ghcr
-        run: echo ${{ secrets.GH_TOKEN }} | docker login ghcr.io -u nilabhra --password-stdin
+        run: echo ${{ secrets.GH_TOKEN }} | docker login ghcr.io -u nil2000 --password-stdin
 
       - name: Build and push
-        run: docker build -t ghcr.io/nilabhra/cursor-for-2d-animations/processor-prod:latest . -f docker/Dockerfile.processor
+        run: docker build -t ghcr.io/nil2000/cursor-for-2d-animations/processor-prod:latest . -f docker/Dockerfile.processor
 
       - name: Push to ghcr
-        run: docker push ghcr.io/nilabhra/cursor-for-2d-animations/processor-prod:latest
+        run: docker push ghcr.io/nil2000/cursor-for-2d-animations/processor-prod:latest
 
   # Deploy to VPS
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SSH key
-        uses: webfactory/ssh-agent@v1
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
 
       - name: Copy files to VPS
         run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            mkdir -p /root/app
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            mkdir -p /root/cursor_processor
           EOF
-          scp docker-compose.processor.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/root/app/
+          scp docker-compose.processor.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/root/cursor_processor/
 
       - name: Create .env file from GitHub secrets
         run: |
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /root/app
+            cd /root/cursor_processor
             cat > .env << EOL
             REDIS_URL="${{ secrets.REDIS_URL }}"
             REDIS_QUEUE_NAME="${{ secrets.REDIS_QUEUE_NAME }}"
@@ -64,7 +71,7 @@ jobs:
       - name: Build and restart container
         run: |
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /root/app
+            cd /root/cursor_processor
             docker compose -f docker-compose.processor.yml down
             docker compose -f docker-compose.processor.yml pull
             docker compose -f docker-compose.processor.yml up -d
