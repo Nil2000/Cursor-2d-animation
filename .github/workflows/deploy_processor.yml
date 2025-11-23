@@ -46,14 +46,14 @@ jobs:
       - name: Copy files to VPS
         run: |
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            mkdir -p /root/app
+            mkdir -p /root/cursor_processor
           EOF
-          scp docker-compose.processor.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/root/app/
+          scp docker-compose.processor.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/root/cursor_processor/
 
       - name: Create .env file from GitHub secrets
         run: |
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /root/app
+            cd /root/cursor_processor
             cat > .env << EOL
             REDIS_URL="${{ secrets.REDIS_URL }}"
             REDIS_QUEUE_NAME="${{ secrets.REDIS_QUEUE_NAME }}"
@@ -71,7 +71,7 @@ jobs:
       - name: Build and restart container
         run: |
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /root/app
+            cd /root/cursor_processor
             docker compose -f docker-compose.processor.yml down
             docker compose -f docker-compose.processor.yml pull
             docker compose -f docker-compose.processor.yml up -d
