@@ -160,6 +160,19 @@ export default function HeroSection({
             <br />
             customizable pages that boost your product&apos;s credibility.
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.4 }}
+          >
+            <Link href="/login">
+              <Button className="flex justify-center cursor-pointer">
+                Get Started
+                <ArrowRightIcon />
+              </Button>
+            </Link>
+          </motion.div>
         </>
       )}
     </motion.div>
