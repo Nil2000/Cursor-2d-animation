@@ -16,16 +16,17 @@ const VideoMessage = memo(
       <div className="w-max">
         {video.status === "pending" ? (
           <ShimmeringText
-            className="font-semibold"
+            className="font-semibold text-sm"
             text="Video is being generated..."
             wave
           />
         ) : video.status === "completed" ? (
           <Card className="p-4 rounded-md shadow-none w-max flex flex-row items-center gap-2 justify-between">
-            <p>Video is ready to play</p>
+            <p className="text-sm">Video is ready to play</p>
             <Button
               className="cursor-pointer rounded-sm"
               onClick={() => onVideoClick?.(video)}
+              size={"sm"}
             >
               Show video
             </Button>

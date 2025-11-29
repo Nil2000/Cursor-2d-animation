@@ -11,10 +11,7 @@ export default function NavbarAuthStatus() {
     return (
       <div className="flex items-center gap-2">
         <Link href={"/login"}>
-          <Button variant={"outline"}>Signin</Button>
-        </Link>
-        <Link href={"/signup"}>
-          <Button>Signup</Button>
+          <Button className="cursor-pointer">Get Started</Button>
         </Link>
       </div>
     );
