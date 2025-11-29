@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HeroSection({
   authenticated,
@@ -91,32 +92,32 @@ export default function HeroSection({
             transition={{ duration: 0.5 }}
           >
             <div className="flex -space-x-1.5">
-              <img
-                className="ring-background rounded-full ring-1"
-                src="https://originui.com/avatar-80-03.jpg"
-                width={20}
-                height={20}
+              <Image
+                className="h-8 w-8 rounded-full object-cover object-top"
+                src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YXZhdGFyc3xlbnwwfHwwfHx8MA%3D%3D"
+                width={100}
+                height={100}
                 alt="Avatar 01"
               />
-              <img
-                className="ring-background rounded-full ring-1"
-                src="https://originui.com/avatar-80-04.jpg"
-                width={20}
-                height={20}
+              <Image
+                className="h-8 w-8 rounded-full object-cover object-top"
+                src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8YXZhdGFyc3xlbnwwfHwwfHx8MA%3D%3D"
+                width={100}
+                height={100}
                 alt="Avatar 02"
               />
-              <img
-                className="ring-background rounded-full ring-1"
-                src="https://originui.com/avatar-80-05.jpg"
-                width={20}
-                height={20}
+              <Image
+                className="h-8 w-8 rounded-full object-cover object-top"
+                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGF2YXRhcnN8ZW58MHx8MHx8fDA%3D"
+                width={100}
+                height={100}
                 alt="Avatar 03"
               />
-              <img
-                className="ring-background rounded-full ring-1"
-                src="https://originui.com/avatar-80-06.jpg"
-                width={20}
-                height={20}
+              <Image
+                className="h-8 w-8 rounded-full object-cover object-top"
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGF2YXRhcnN8ZW58MHx8MHx8fDA%3D"
+                width={100}
+                height={100}
                 alt="Avatar 04"
               />
             </div>
