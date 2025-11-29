@@ -19,7 +19,7 @@ const UserBubble = React.memo(function UserBubble({
 }: Props) {
   const [hovered, setHovered] = React.useState(false);
   return (
-    <div className="flex justify-end items-center">
+    <div className="flex justify-end items-start">
       {retry && hovered && (
         <div
           className="flex gap-2 -mr-2 px-4"
@@ -37,7 +37,7 @@ const UserBubble = React.memo(function UserBubble({
         </div>
       )}
       <Card
-        className="p-4 sm:max-w-3/4 max-w-full w-max rounded-md shadow-none bg-primary text-primary-foreground mr-2"
+        className="p-4 sm:max-w-3/4 rounded-md shadow-none bg-primary text-primary-foreground mr-2"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >

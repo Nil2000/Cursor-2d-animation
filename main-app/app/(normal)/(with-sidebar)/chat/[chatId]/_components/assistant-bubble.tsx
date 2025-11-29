@@ -31,7 +31,7 @@ const AssistantBubble = React.memo(function AssistantBubble({
   }, [chat_videos]);
 
   return (
-    <div className="flex justify-start items-end gap-2">
+    <div className="flex justify-start items-start gap-2">
       <MachineLogo />
       {error ? (
         <Card className="p-4 sm:max-w-3/4 max-w-full w-max rounded-md bg-red-100 text-red-800 shadow-none">

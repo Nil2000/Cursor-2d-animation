@@ -75,7 +75,7 @@ export default async function PaymentsPage() {
     <div className="container mx-auto py-8 px-4 max-w-7xl pt-16">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-900 to-neutral-700 dark:from-neutral-100 dark:to-neutral-400">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-linear-gradient-to-b from-neutral-900 to-neutral-700 dark:from-neutral-100 dark:to-neutral-400">
             Payment History
           </h1>
           <p className="text-muted-foreground mt-2">
