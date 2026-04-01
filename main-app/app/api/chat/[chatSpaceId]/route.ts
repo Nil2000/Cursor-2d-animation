@@ -1,9 +1,11 @@
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ chatSpaceId: string }> }
+  { params }: { params: Promise<{ chatSpaceId: string }> },
 ) {
   const { chatSpaceId } = await params;
 
@@ -11,7 +13,28 @@ export async function GET(
     return new Response("Invalid request", { status: 400 });
   }
 
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session || !session.user) {
+    return new NextResponse("Unauthorized", {
+      status: 401,
+    });
+  }
+
+  // Check if the chat space belongs to the user
   try {
+    const chatSpace = await db.query.chat_space.findFirst({
+      where: (chatSpace, { eq }) => eq(chatSpace.id, chatSpaceId),
+    });
+
+    if (!chatSpace || chatSpace.userId !== session.user.id) {
+      return new NextResponse("Unauthorized", {
+        status: 401,
+      });
+    }
+
     const messages = await db.query.chat.findMany({
       where: (chat, { eq }) => eq(chat.chatSpaceId, chatSpaceId),
       with: {
@@ -24,13 +47,13 @@ export async function GET(
       {
         messages: messages,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error fetching messages", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
