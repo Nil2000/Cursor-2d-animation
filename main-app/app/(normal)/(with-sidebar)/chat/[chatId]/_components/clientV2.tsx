@@ -28,7 +28,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState<boolean>(
-    spaceExists ? false : true
+    spaceExists ? false : true,
   );
   const [inputText, setInputText] = React.useState<string>("");
   const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
@@ -47,13 +47,13 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       setSelectedVideos(allVideos);
       setVideoDialogOpen(true);
     },
-    []
+    [],
   );
 
   // Check if there are any pending video generations
   const hasPendingVideos = React.useMemo(() => {
     return messages.some((message) =>
-      message.chat_videos?.some((video) => video.status === "pending")
+      message.chat_videos?.some((video) => video.status === "pending"),
     );
   }, [messages]);
 
@@ -76,7 +76,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
     // Check if there are any failed videos in the last assistant message
     const hasFailedVideos = lastMessage.chat_videos?.some(
-      (video) => video.status === "failed"
+      (video) => video.status === "failed",
     );
 
     return hasFailedVideos || false;
@@ -99,9 +99,9 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
             chat_videos: msg.chat_videos?.map((video) =>
               video.id === videoId
                 ? { ...video, status: videoStatus.status, url: videoStatus.url }
-                : video
+                : video,
             ),
-          }))
+          })),
         );
 
         // If video is completed or failed, stop polling
@@ -115,7 +115,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
             pollingIntervals.current.delete(videoId);
           }
           console.log(
-            `Video ${videoId} polling stopped. Status: ${videoStatus.status}`
+            `Video ${videoId} polling stopped. Status: ${videoStatus.status}`,
           );
         }
       } catch (error) {
@@ -128,9 +128,9 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
             chat_videos: msg.chat_videos?.map((video) =>
               video.id === videoId
                 ? { ...video, status: "failed" as const }
-                : video
+                : video,
             ),
-          }))
+          })),
         );
 
         const interval = pollingIntervals.current.get(videoId);
@@ -142,7 +142,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         refetchCredits();
       }
     },
-    [refetchCredits]
+    [refetchCredits],
   );
 
   const startVideoPolling = React.useCallback(
@@ -164,7 +164,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
       pollingIntervals.current.set(videoId, interval);
     },
-    [pollVideoStatus]
+    [pollVideoStatus],
   );
 
   const getLastMessageFromLocalStorage = () => {
@@ -240,8 +240,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         updateTimeout = setTimeout(() => {
           setMessages((prev) =>
             prev.map((msg) =>
-              msg.id === tempMessageId ? { ...msg, body } : msg
-            )
+              msg.id === tempMessageId ? { ...msg, body } : msg,
+            ),
           );
         }, 50);
       };
@@ -253,8 +253,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
             prev.map((msg) =>
               msg.id === tempMessageId
                 ? { ...msg, body: accumulatedContent }
-                : msg
-            )
+                : msg,
+            ),
           );
 
           if (updateTimeout) {
@@ -342,7 +342,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
               };
             }
             return msg;
-          })
+          }),
         );
         // Start polling for each video
         for (const video of streamMetadata.videos) {
@@ -358,8 +358,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         prev.map((msg) =>
           msg.id === tempMessageId
             ? { ...msg, content: "Error: Failed to process response" }
-            : msg
-        )
+            : msg,
+        ),
       );
     } finally {
       setLoading(false);
@@ -392,17 +392,14 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       setTimeout(() => {
         void (async () => {
           try {
-            const response = await fetch(
-              `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat`,
-              {
-                method: "POST",
-                body: JSON.stringify({
-                  message: input,
-                  chatId: chatId,
-                }),
-                signal: abortController.current?.signal,
-              }
-            );
+            const response = await fetch(`/api/chat`, {
+              method: "POST",
+              body: JSON.stringify({
+                message: input,
+                chatId: chatId,
+              }),
+              signal: abortController.current?.signal,
+            });
 
             await processStream(response);
           } catch (error) {
@@ -437,16 +434,13 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       // Remove the last message from the UI immediately (it should be an assistant message)
       setMessages((prev) => prev.slice(0, -1));
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat/retry`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            chatId: chatId,
-          }),
-          signal: abortController.current?.signal,
-        }
-      );
+      const response = await fetch(`/api/chat/retry`, {
+        method: "POST",
+        body: JSON.stringify({
+          chatId: chatId,
+        }),
+        signal: abortController.current?.signal,
+      });
 
       await processStream(response);
     } catch (error) {
