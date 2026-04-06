@@ -1,14 +1,12 @@
+import { addChatToSpace } from "@/lib/chat-utils/spaceActions";
 import {
-  addChatToSpace,
-  setTitleToChatSpace,
-} from "@/lib/chat-utils/spaceActions";
-import { streamTextForChat } from "@/lib/chat-utils/streamText";
+  createChatGenerationStreamResponse,
+  TOTAL_VIDEO_COST,
+  INSUFFICIENT_CREDITS_MESSAGE,
+} from "@/lib/chat-utils/chatGeneration";
 import { NextRequest, NextResponse } from "next/server";
-import { getPythonBlockCodeFromMessage } from "@/lib/chat-utils/getPythonBlockCode";
-import { getTitleFromMessage } from "@/lib/chat-utils/getTitleFromMessage";
-import { sendToQueue } from "@/lib/queue-utils/sendToQueue";
 import { db } from "@/lib/db";
-import { chat, chat_space, chat_video, user, creditTransaction } from "@/lib/schema";
+import { chat, chat_space, user } from "@/lib/schema";
 import { Messages, Role } from "@/lib/types";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -43,16 +41,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { credits, isPremium } = userData[0];
+  const { credits, isPremium: rawIsPremium } = userData[0];
+  const isPremium = Boolean(rawIsPremium);
 
-  // Validate credits: user must be premium or have credits > 0
-  if (!isPremium && credits <= 0) {
+  // Validate credits: user must be premium or have enough credits for video generation
+  if (!isPremium && credits < TOTAL_VIDEO_COST) {
     return NextResponse.json(
       {
-        error:
-          "Insufficient credits. Please purchase more credits to continue.",
+        error: INSUFFICIENT_CREDITS_MESSAGE,
       },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -88,7 +86,6 @@ export async function POST(req: NextRequest) {
       await addChatToSpace(chatId, "user", message);
     }
 
-    // Prepare messages for streaming (existing chats + current message)
     const messages: Messages = [
       ...existingChats.map((chat) => ({
         content: chat.body,
@@ -100,153 +97,18 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    // Create a readable stream for streaming response
-    let fullResponse = "";
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        let videoQualityMap: Array<{
-          id: string;
-          quality: string;
-          url: string;
-          status: string;
-        }> = [];
-
-        try {
-          await streamTextForChat(messages, (chunk: string) => {
-            fullResponse += chunk;
-            // Send chunk to client in SSE format
-            const sseData = `data: ${JSON.stringify({ content: chunk })}\n\n`;
-            controller.enqueue(encoder.encode(sseData));
-          });
-
-          // After streaming is complete, add to database
-          const responseChatId = await addChatToSpace(
-            chatId,
-            "assistant",
-            fullResponse,
-            undefined // No contextId for now since we're using streaming
-          );
-
-          // Get Python code block from response
-          const codeBlock = await getPythonBlockCodeFromMessage(fullResponse);
-          if (!codeBlock) {
-            console.log("No Python code block found in the response.");
-          } else {
-            // Create 3 videos with different qualities
-            const qualities = ["high", "medium", "low"] as const;
-            const now = new Date();
-
-            const newChatVideos = await db
-              .insert(chat_video)
-              .values(
-                qualities.map((quality) => ({
-                  chatId: responseChatId,
-                  createdAt: now,
-                  updatedAt: now,
-                  status: "pending" as const,
-                  quality,
-                  url: null,
-                }))
-              )
-              .returning();
-
-            console.log("Codeblock", codeBlock);
-            videoQualityMap = newChatVideos.map((video) => ({
-              id: video.id,
-              quality: video.quality,
-              url: "",
-              status: "pending",
-            }));
-
-            // Deduct credits immediately for non-premium users to prevent race conditions
-            if (!isPremium) {
-              await db.transaction(async (tx) => {
-                const currentUserCredits = await tx
-                  .select({ credits: user.credits })
-                  .from(user)
-                  .where(eq(user.id, session.user.id))
-                  .limit(1);
-
-                if (currentUserCredits.length > 0) {
-                  // Calculate total cost for all videos (usually 3 videos, 1 credit each = 3 credits)
-                  const totalCost = newChatVideos.reduce(
-                    (sum, video) => sum + video.creditsCost,
-                    0
-                  );
-                  const newBalance = currentUserCredits[0].credits - totalCost;
-
-                  // Deduct credits immediately
-                  await tx
-                    .update(user)
-                    .set({ credits: newBalance })
-                    .where(eq(user.id, session.user.id));
-
-                  // Create transaction record with pending status (will be updated to completed/failed later)
-                  await tx.insert(creditTransaction).values({
-                    userId: session.user.id,
-                    type: "video_generation",
-                    amount: -totalCost,
-                    balanceAfter: newBalance,
-                    description: `Video generation for chat ${responseChatId} (${newChatVideos.length} videos)`,
-                    chatId: responseChatId,
-                    createdAt: new Date(),
-                    transactionalStatus: "pending",
-                  });
-
-                  console.log(
-                    `Deducted ${totalCost} credits immediately for ${newChatVideos.length} videos. New balance: ${newBalance}`
-                  );
-                }
-              });
-            }
-
-            // Add to queue for processing - send all video IDs with quality info
-            await sendToQueue(codeBlock, videoQualityMap, responseChatId);
-          }
-
-          // Extract title from the AI response
-          if (isFirstConversation) {
-            const extractedTitle = getTitleFromMessage(fullResponse);
-            await setTitleToChatSpace(chatId, extractedTitle);
-          }
-
-          // Send metadata at the end
-          const metadataData = `data: ${JSON.stringify({
-            type: "metadata",
-            chatId: chatId,
-            videos: videoQualityMap,
-          })}\n\n`;
-          controller.enqueue(encoder.encode(metadataData));
-
-          // Send completion signal
-          const doneData = `data: [DONE]\n\n`;
-          controller.enqueue(encoder.encode(doneData));
-        } catch (error) {
-          console.error("Error during streaming:", error);
-          controller.enqueue(
-            encoder.encode("Error: Failed to get AI response")
-          );
-        } finally {
-          // Close the stream
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+    return createChatGenerationStreamResponse({
+      chatId,
+      messages,
+      isPremium,
+      sessionUserId: session.user.id,
+      isFirstConversation,
     });
   } catch (error) {
     console.error("Error generating chat completions", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

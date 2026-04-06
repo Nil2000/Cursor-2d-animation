@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { chat_video, user, creditTransaction } from "@/lib/schema";
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!chatId || !videoUrls || videoUrls.length === 0) {
     return NextResponse.json(
       { error: "chatId and videoUrls are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -73,7 +73,14 @@ export async function POST(req: NextRequest) {
             userId: creditTransaction.userId,
           })
           .from(creditTransaction)
-          .where(eq(creditTransaction.chatId, videoChatId))
+          .where(
+            and(
+              eq(creditTransaction.chatId, videoChatId),
+              eq(creditTransaction.type, "video_generation"),
+              eq(creditTransaction.transactionalStatus, "pending"),
+            ),
+          )
+          .orderBy(desc(creditTransaction.createdAt))
           .limit(1);
 
         if (pendingTransaction.length > 0) {
@@ -126,7 +133,7 @@ export async function POST(req: NextRequest) {
                 });
 
                 console.log(
-                  `Refunded ${refundAmount} credits for failed generation. New balance: ${newBalance}`
+                  `Refunded ${refundAmount} credits for failed generation. New balance: ${newBalance}`,
                 );
               }
             } else {
@@ -138,7 +145,7 @@ export async function POST(req: NextRequest) {
 
               totalCreditsDeducted = Math.abs(transaction.amount);
               console.log(
-                `Completed transaction ${transaction.id} - ${totalCreditsDeducted} credits charged`
+                `Completed transaction ${transaction.id} - ${totalCreditsDeducted} credits charged`,
               );
             }
           }
@@ -146,7 +153,7 @@ export async function POST(req: NextRequest) {
       }
 
       console.log(
-        `Updated ${videoUrls.length} videos for chatId: ${chatId}. Status: All done`
+        `Updated ${videoUrls.length} videos for chatId: ${chatId}. Status: All done`,
       );
     });
 
@@ -155,7 +162,7 @@ export async function POST(req: NextRequest) {
     console.error("Error updating video statuses:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
