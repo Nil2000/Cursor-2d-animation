@@ -12,11 +12,8 @@ concurrency:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: main-app
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Bun
@@ -26,7 +23,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Drizzle generate
         run: bun run db:generate
@@ -35,11 +32,8 @@ jobs:
         run: bun run build
 
   check-types:
+    name: Check types
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: main-app
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Bun
@@ -49,7 +43,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Drizzle generate
         run: bun run db:generate
@@ -58,11 +52,8 @@ jobs:
         run: bunx tsc --noEmit
 
   lint:
+    name: Lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: main-app
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Bun
@@ -72,7 +63,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Drizzle generate
         run: bun run db:generate
