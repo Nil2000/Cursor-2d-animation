@@ -13,6 +13,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: processor
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +30,9 @@ jobs:
 
   check-types:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: processor
 
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +47,9 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: processor
 
     steps:
       - uses: actions/checkout@v4
