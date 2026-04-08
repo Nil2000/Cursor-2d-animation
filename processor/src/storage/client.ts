@@ -1,7 +1,5 @@
 import { Client } from "minio";
 
-let minioClient: Client | null = null;
-
 export const getMinioClient = (): Client => {
   if (
     !process.env.S3_ENDPOINT ||
@@ -9,7 +7,7 @@ export const getMinioClient = (): Client => {
     !process.env.S3_SECRET_KEY
   ) {
     throw new Error(
-      "S3 not properly configured. Missing one of those variables: S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY"
+      "S3 not properly configured. Missing one of those variables: S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY",
     );
   }
 

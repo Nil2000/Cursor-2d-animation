@@ -69,7 +69,7 @@ const generateLowerQualityVideo = (
 
 export async function runCodeInDocker(
   code: string,
-  videoIds: Array<{ id: string; quality: string }>,
+  videoIds: Array<{ id: string; quality?: string }>,
 ) {
   const tempDir = getJobTempDir();
   fs.mkdirSync(tempDir, { recursive: true });
@@ -132,12 +132,15 @@ export async function runCodeInDocker(
         try {
           await generateLowerQualityVideo(fullPath, video480pPath, 480);
           await generateLowerQualityVideo(fullPath, video144pPath, 144);
-        } catch (ffmpegError: any) {
-          console.error(
-            "Error generating lower quality videos:",
-            ffmpegError.message,
-          );
-          throw new Error(`FFmpeg processing failed: ${ffmpegError.message}`);
+        } catch (ffmpegError: unknown) {
+          const message =
+            ffmpegError instanceof Error
+              ? ffmpegError.message
+              : String(ffmpegError);
+          console.error("Error generating lower quality videos:", message);
+          throw new Error(`FFmpeg processing failed: ${message}`, {
+            cause: ffmpegError,
+          });
         }
 
         // Upload all three quality versions to S3
@@ -206,11 +209,12 @@ export async function runCodeInDocker(
       }
     }
     throw new Error("No output video file found in the expected directory.");
-  } catch (error: any) {
-    console.log("Error in runCodeInDocker:", error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log("Error in runCodeInDocker:", message);
     return {
       status: "error",
-      error: error.message,
+      error: message,
     };
   } finally {
     // Clean up temporary files on every exit path

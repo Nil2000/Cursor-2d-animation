@@ -2,6 +2,9 @@ import Redis from "ioredis";
 
 let redisClient: Redis | null = null;
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 const getRedisClient = () => {
   if (!process.env.REDIS_URL) {
     throw new Error("REDIS_URL must be set");
@@ -32,7 +35,7 @@ export const startConsumingMessages = async ({
     try {
       // Use BLPOP for blocking queue consumption
       const result = await client.blpop(queueName, 10); // 10 second timeout
-      
+
       if (result) {
         const [, message] = result;
         console.log({
@@ -47,9 +50,9 @@ export const startConsumingMessages = async ({
           });
         }
       }
-    } catch (error: any) {
-      console.error("Error in queue consumption:", error.message);
-      console.log(error.stack);
+    } catch (error: unknown) {
+      console.error("Error in queue consumption:", getErrorMessage(error));
+      console.log(error instanceof Error ? error.stack : undefined);
       // Wait a bit before retrying
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
