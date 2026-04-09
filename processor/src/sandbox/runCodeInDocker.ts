@@ -6,6 +6,9 @@ import ffmpeg from "fluent-ffmpeg";
 import { uploadToS3Bucket } from "../storage/uploadToS3bucket";
 
 const execAsync = promisify(exec);
+const DOCKER_TIMEOUT_MS = 15 * 60 * 1000;
+const DOCKER_MEMORY_LIMIT = "2g";
+const DOCKER_CPU_LIMIT = "2";
 
 const getJobTempDir = () => {
   const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -75,10 +78,22 @@ export async function runCodeInDocker(
   fs.mkdirSync(tempDir, { recursive: true });
   fs.writeFileSync(path.join(tempDir, "code.py"), code);
 
-  const dockerCmd = `docker run --rm -v "${tempDir}:/manim" manimcommunity/manim manim -qh code.py`;
+  const dockerCmd = [
+    "docker run --rm",
+    `--memory=${DOCKER_MEMORY_LIMIT}`,
+    `--cpus=${DOCKER_CPU_LIMIT}`,
+    "--network=none",
+    `-v "${tempDir}:/manim"`,
+    "manimcommunity/manim",
+    "manim -qh code.py",
+  ].join(" ");
   try {
     // console.log("Running Docker command:", dockerCmd);
-    const result = await execAsync(dockerCmd);
+    const result = await execAsync(dockerCmd, {
+      timeout: DOCKER_TIMEOUT_MS,
+      killSignal: "SIGKILL",
+      maxBuffer: 10 * 1024 * 1024,
+    });
 
     // console.log("Docker command output:", result.stdout);
     if (result.stderr) {
