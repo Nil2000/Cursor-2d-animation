@@ -1,17 +1,9 @@
 import { runCodeInDocker } from "./sandbox/runCodeInDocker";
-
-type VideoPayload = {
-  id: string;
-  url?: string;
-  status?: string;
-  quality?: string;
-};
-
-type ProcessMessagePayload = {
-  chatId: string;
-  code: string;
-  videos: Array<{ id: string }>;
-};
+import {
+  processMessagePayloadSchema,
+  type ProcessMessagePayload,
+  type VideoPayload,
+} from "./types";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -19,20 +11,22 @@ const getErrorMessage = (error: unknown) =>
 export async function processMessage(message: string) {
   console.log("Processing message:", message);
 
-  // Parse Redis message format (simple JSON string)
-  const { chatId, code, videos } = JSON.parse(message) as ProcessMessagePayload;
-
-  if (!chatId || !code || !videos) {
-    throw new Error(
-      "Invalid message format: chatId, code, and videos are required",
-    );
-  }
-
-  console.log("Message chatId:", chatId);
-  console.log("Message code:", code);
-  console.log("Message videos:", videos);
+  let chatId = "";
+  let videos: ProcessMessagePayload["videos"] = [];
 
   try {
+    // Parse Redis message format (simple JSON string)
+    const parsedMessage = processMessagePayloadSchema.parse(
+      JSON.parse(message),
+    ) as ProcessMessagePayload;
+
+    ({ chatId, videos } = parsedMessage);
+    const { code } = parsedMessage;
+
+    console.log("Message chatId:", chatId);
+    console.log("Message code:", code);
+    console.log("Message videos:", videos);
+
     // Run the code in Docker container
     const status = await runCodeInDocker(code, videos);
     console.log("Code execution status:", status);
