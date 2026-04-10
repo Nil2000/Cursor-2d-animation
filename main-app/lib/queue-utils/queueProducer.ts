@@ -24,6 +24,26 @@ export const getRedisClient = async () => {
   }
 };
 
+// for graceful shutdown
+const shutdown = async (signal: string) => {
+  console.log(`Received ${signal}, closing Redis connection...`);
+
+  if (redis_client) {
+    try {
+      await redis_client.quit();
+      console.log("Redis connection closed gracefully");
+    } catch (error) {
+      console.error("Error closing Redis connection:", error);
+    }
+  }
+
+  process.exit(0);
+};
+
+// Register signal handlers
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 export const pushToQueue = async (queueName: string, message: any) => {
   const client = await getRedisClient();
   try {
