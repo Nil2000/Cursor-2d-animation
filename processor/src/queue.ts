@@ -1,6 +1,7 @@
 import Redis from "ioredis";
 
 let redisClient: Redis | null = null;
+let isShuttingDown = false;
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -17,6 +18,26 @@ const getRedisClient = () => {
   return redisClient;
 };
 
+const shutdown = async (signal: string) => {
+  console.log(`Received ${signal}, initiating graceful shutdown...`);
+  isShuttingDown = true;
+
+  if (redisClient) {
+    try {
+      await redisClient.quit();
+      console.log("Redis connection closed gracefully");
+    } catch (error) {
+      console.error("Error closing Redis connection:", error);
+    }
+  }
+
+  process.exit(0);
+};
+
+// Register signal handlers
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 type Props = {
   queueName: string;
   onMessage: (message: string) => Promise<void>;
@@ -31,7 +52,7 @@ export const startConsumingMessages = async ({
   console.log("Connected to Redis");
   console.log(`Started consuming messages from queue: ${queueName}`);
 
-  while (true) {
+  while (!isShuttingDown) {
     try {
       // Use BLPOP for blocking queue consumption
       const result = await client.blpop(queueName, 10); // 10 second timeout
@@ -51,6 +72,8 @@ export const startConsumingMessages = async ({
         }
       }
     } catch (error: unknown) {
+      if (isShuttingDown) break;
+
       console.error("Error in queue consumption:", getErrorMessage(error));
       console.log(error instanceof Error ? error.stack : undefined);
       // Wait a bit before retrying
