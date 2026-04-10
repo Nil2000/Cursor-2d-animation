@@ -37,6 +37,7 @@ const cleanupTempFiles = (dirPath: string) => {
 
       const initialItems = fs.readdirSync(dirPath);
       cleanupRecursively(dirPath);
+      fs.rmdirSync(dirPath);
       console.log(
         `Cleaned up ${initialItems.length} temporary items (files and directories) recursively`,
       );
