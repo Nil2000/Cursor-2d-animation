@@ -1,20 +1,32 @@
 import { runCodeInDocker } from "./sandbox/runCodeInDocker";
+import {
+  processMessagePayloadSchema,
+  type ProcessMessagePayload,
+  type VideoPayload,
+} from "./types";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
 
 export async function processMessage(message: string) {
   console.log("Processing message:", message);
 
-  // Parse Redis message format (simple JSON string)
-  const { chatId, code, videos } = JSON.parse(message);
-  
-  if (!chatId || !code || !videos) {
-    throw new Error("Invalid message format: chatId, code, and videos are required");
-  }
-
-  console.log("Message chatId:", chatId);
-  console.log("Message code:", code);
-  console.log("Message videos:", videos);
+  let chatId = "";
+  let videos: ProcessMessagePayload["videos"] = [];
 
   try {
+    // Parse Redis message format (simple JSON string)
+    const parsedMessage = processMessagePayloadSchema.parse(
+      JSON.parse(message),
+    ) as ProcessMessagePayload;
+
+    ({ chatId, videos } = parsedMessage);
+    const { code } = parsedMessage;
+
+    console.log("Message chatId:", chatId);
+    console.log("Message code:", code);
+    console.log("Message videos:", videos);
+
     // Run the code in Docker container
     const status = await runCodeInDocker(code, videos);
     console.log("Code execution status:", status);
@@ -42,7 +54,7 @@ export async function processMessage(message: string) {
         },
         body: JSON.stringify({
           chatId: chatId,
-          videoUrls: status.uploadUrls.map((upload: any) => ({
+          videoUrls: status.uploadUrls.map((upload: VideoPayload) => ({
             id: upload.id,
             url: upload.url,
             status: "completed" as const,
@@ -59,14 +71,14 @@ export async function processMessage(message: string) {
       console.log(
         "Video status update response:",
         response.status,
-        responseData
+        responseData,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating video status:");
-      console.error("Error message:", error.message);
+      console.error("Error message:", getErrorMessage(error));
       throw error;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error processing message:", error);
     // Update all video statuses in the API with failure
     try {
@@ -78,15 +90,18 @@ export async function processMessage(message: string) {
         },
         body: JSON.stringify({
           chatId: chatId,
-          videoUrls: videos.map((video: any) => ({
+          videoUrls: videos.map((video: { id: string }) => ({
             id: video.id,
             url: "",
             status: "failed" as const,
           })),
         }),
       });
-    } catch (updateError: any) {
-      console.error("Error updating video status on failure:", updateError.message);
+    } catch (updateError: unknown) {
+      console.error(
+        "Error updating video status on failure:",
+        getErrorMessage(updateError),
+      );
     }
   }
 }

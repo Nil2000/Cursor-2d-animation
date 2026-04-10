@@ -1,9 +1,12 @@
 import { getMinioClient } from "./client";
 import fs from "fs";
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 export async function uploadToS3Bucket(
   filePath: string,
-  key: string
+  key: string,
 ): Promise<{ status: string; url?: string; error?: string }> {
   const s3Client = getMinioClient();
 
@@ -18,16 +21,17 @@ export async function uploadToS3Bucket(
       {
         "Content-Type": "video/mp4",
         "Cache-Control": "public, max-age=86400",
-      }
+      },
     );
 
     return {
       status: "success",
       url: `${parseS3PublicBaseUrl()}/public/${key}`,
     };
-  } catch (error: any) {
-    console.error("Error uploading to S3 bucket:", error.message);
-    return { status: "error", error: error.message };
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    console.error("Error uploading to S3 bucket:", message);
+    return { status: "error", error: message };
   }
 }
 
