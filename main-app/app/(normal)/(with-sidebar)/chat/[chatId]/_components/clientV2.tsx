@@ -357,7 +357,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempMessageId
-            ? { ...msg, content: "Error: Failed to process response" }
+            ? { ...msg, body: "Error: Failed to process response" }
             : msg,
         ),
       );
