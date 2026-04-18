@@ -20,8 +20,7 @@ export async function processMessage(message: string) {
       JSON.parse(message),
     ) as ProcessMessagePayload;
 
-    ({ chatId, videos } = parsedMessage);
-    const { code } = parsedMessage;
+    const { chatId, code, videos } = parsedMessage;
 
     console.log("Message chatId:", chatId);
     console.log("Message code:", code);

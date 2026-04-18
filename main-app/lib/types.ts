@@ -14,6 +14,13 @@ export type ClientMessageVideoType = {
   url: string;
 };
 
+/** JSON body of a successful POST /api/chat or POST /api/chat/retry response */
+export type ChatGenerationApiSuccess = {
+  chatId: string;
+  body: string;
+  videos: ClientMessageVideoType[];
+};
+
 export type UserInfoType = {
   id: string;
   name: string;

@@ -9,6 +9,7 @@ import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import {
+  ChatGenerationApiSuccess,
   ClientMessageType,
   Role,
   UserInfoType,
@@ -200,167 +201,80 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     setMessages(res.data.messages);
   };
 
-  const processStream = async (response: Response) => {
-    if (!response.ok) {
-      console.log("error", response);
-      throw new Error("Error processing stream");
-    }
-    const tempMessageId = `msg-${Date.now()}`;
-    let streamMetadata: {
-      chatId?: string;
-      videos?: Array<ClientMessageVideoType>;
-    } = {};
-
+  const handleChatApiResponse = async (
+    response: Response,
+    resyncOnFailure?: () => void | Promise<void>,
+  ) => {
     try {
-      const reader = response.body?.getReader();
-      if (!reader) {
-        console.log("no reader");
-        throw new Error("No reader");
+      const raw = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        if (resyncOnFailure) {
+          await resyncOnFailure();
+        } else {
+          const errMsg =
+            raw &&
+            typeof raw === "object" &&
+            "error" in raw &&
+            typeof (raw as { error: unknown }).error === "string"
+              ? (raw as { error: string }).error
+              : "Request failed";
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-${Date.now()}`,
+              type: Role.Assistant,
+              body: "",
+              error: errMsg,
+              contextId: null,
+            },
+          ]);
+        }
+        return;
+      }
+
+      const success = raw as ChatGenerationApiSuccess;
+      if (
+        !success ||
+        typeof success.body !== "string" ||
+        !Array.isArray(success.videos)
+      ) {
+        throw new Error("Invalid response shape");
       }
 
       setMessages((prev) => [
         ...prev,
         {
-          id: tempMessageId,
+          id: `msg-${Date.now()}`,
           type: Role.Assistant,
-          body: "",
+          body: success.body,
           contextId: null,
+          chat_videos:
+            success.videos.length > 0 ? success.videos : undefined,
         },
       ]);
 
-      let accumulatedContent = "";
-      let buffer = "";
-      let updateTimeout: NodeJS.Timeout | null = null;
-
-      const updateMessage = (body: string) => {
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        updateTimeout = setTimeout(() => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempMessageId ? { ...msg, body } : msg,
-            ),
-          );
-        }, 50);
-      };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempMessageId
-                ? { ...msg, body: accumulatedContent }
-                : msg,
-            ),
-          );
-
-          if (updateTimeout) {
-            clearTimeout(updateTimeout);
-          }
-          break;
-        }
-        const chunk = new TextDecoder().decode(value);
-        buffer += chunk;
-
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        let hasNewContent = false;
-
-        for (const line of lines) {
-          if (line.trim() === "") continue;
-
-          if (line.startsWith("data: ")) {
-            const data = line.substring(6);
-
-            if (data === "[DONE]") {
-              continue;
-            }
-
-            try {
-              const parsedData = JSON.parse(data) as {
-                content?: string;
-                type: string;
-                chatId?: string;
-                videos?: Array<ClientMessageVideoType>;
-              };
-
-              // Handle metadata
-              if (parsedData.type === "metadata") {
-                streamMetadata = {
-                  chatId: parsedData.chatId,
-                  videos: parsedData.videos,
-                };
-                console.log("Received stream metadata:", streamMetadata);
-                continue;
-              }
-
-              // Handle content
-              const content = parsedData.content;
-              if (content) {
-                accumulatedContent += content;
-                hasNewContent = true;
-              }
-            } catch (e) {
-              console.error("Error parsing JSON:", e, "Raw data:", data);
-              // If it's not JSON, treat it as raw text (fallback)
-              if (data && data !== "[DONE]") {
-                accumulatedContent += data;
-                hasNewContent = true;
-              }
-            }
-          } else if (line.trim()) {
-            // Handle non-SSE format as fallback
-            accumulatedContent += line;
-            hasNewContent = true;
-          }
-        }
-        if (hasNewContent) {
-          updateMessage(accumulatedContent);
-        }
-      }
-
-      // After stream is complete, you can use the metadata
-      if (
-        streamMetadata.chatId &&
-        streamMetadata.videos &&
-        typeof streamMetadata.chatId === "string"
-      ) {
-        console.log("Stream completed with video ID:", streamMetadata.chatId);
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.id === tempMessageId) {
-              return {
-                ...msg,
-                chat_videos: [
-                  ...(msg.chat_videos || []),
-                  ...(streamMetadata.videos || []),
-                ],
-              };
-            }
-            return msg;
-          }),
-        );
-        // Start polling for each video
-        for (const video of streamMetadata.videos) {
+      if (success.videos.length > 0) {
+        for (const video of success.videos) {
           startVideoPolling(video.id);
         }
-        // Refetch credits after video generation is initiated
         refetchCredits();
       }
     } catch (error) {
-      console.log("error", error);
-      console.error("Error processing stream:", error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessageId
-            ? { ...msg, body: "Error: Failed to process response" }
-            : msg,
-        ),
-      );
+      console.error("Error handling chat response:", error);
+      if (resyncOnFailure) {
+        await resyncOnFailure();
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            type: Role.Assistant,
+            body: "Error: Failed to process response",
+            contextId: null,
+          },
+        ]);
+      }
     } finally {
       setLoading(false);
       abortController.current = null;
@@ -389,31 +303,23 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     abortController.current = new AbortController();
 
     try {
-      setTimeout(() => {
-        void (async () => {
-          try {
-            const response = await fetch(`/api/chat`, {
-              method: "POST",
-              body: JSON.stringify({
-                message: input,
-                chatId: chatId,
-              }),
-              signal: abortController.current?.signal,
-            });
+      const response = await fetch(`/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          chatId: chatId,
+        }),
+        signal: abortController.current?.signal,
+      });
 
-            await processStream(response);
-          } catch (error) {
-            if ((error as Error).name !== "AbortError") {
-              console.error("Error sending message:", error);
-            }
-            setLoading(false);
-          }
-        })();
-      }, 0);
+      await handleChatApiResponse(response);
     } catch (error) {
-      console.error("Error preparing request:", error);
-    } finally {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error sending message:", error);
+      }
       setLoading(false);
+      abortController.current = null;
     }
   };
 
@@ -436,20 +342,21 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
       const response = await fetch(`/api/chat/retry`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chatId: chatId,
         }),
         signal: abortController.current?.signal,
       });
 
-      await processStream(response);
+      await handleChatApiResponse(response, getChatHistory);
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         console.error("Error retrying message:", error);
-        // Refresh the chat history on error to restore the correct state
-        getChatHistory();
+        await getChatHistory();
       }
       setLoading(false);
+      abortController.current = null;
     }
   };
 
