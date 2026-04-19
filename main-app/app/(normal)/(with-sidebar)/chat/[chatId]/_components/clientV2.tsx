@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
+import AssistantLoadingBubble from "./assistant-loading-bubble";
 import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
@@ -393,7 +394,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
   React.useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, loading]);
 
   // Cleanup polling intervals when component unmounts or chatId changes
   React.useEffect(() => {
@@ -454,6 +455,11 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                 )}
               </div>
             ))}
+          {loading && (
+            <div className="w-full">
+              <AssistantLoadingBubble />
+            </div>
+          )}
         </div>
       </div>
       <div className="absolute bottom-0 flex justify-center w-full px-6 py-2 mr-2 gap-4 z-10">
