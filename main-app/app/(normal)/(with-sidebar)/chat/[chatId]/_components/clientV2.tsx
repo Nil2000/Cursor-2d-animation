@@ -270,7 +270,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           {
             id: `msg-${Date.now()}`,
             type: Role.Assistant,
-            body: "Error: Failed to process response",
+            body: "",
+            error: "Failed to process response",
             contextId: null,
           },
         ]);
@@ -446,7 +447,6 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                   />
                 ) : (
                   <AssistantBubble
-                    messageBody={message.body}
                     error={message.error}
                     chat_videos={message.chat_videos}
                     onVideoClick={handleOpenVideoDialog}
