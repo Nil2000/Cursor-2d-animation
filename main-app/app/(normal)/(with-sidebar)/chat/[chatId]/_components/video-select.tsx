@@ -8,6 +8,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+export const getQualityLabel = (quality: string) => {
+  const labels: Record<string, string> = {
+    high: "High (1080p)",
+    medium: "Medium (720p)",
+    low: "Low (480p)",
+  };
+  return labels[quality] || quality;
+};
+
 export default function VideoSelect({
   value,
   onValueChange,
@@ -29,7 +38,7 @@ export default function VideoSelect({
             value={video.quality}
             disabled={video.status !== "completed"}
           >
-            {video.quality}
+            {getQualityLabel(video.quality)}
           </SelectItem>
         ))}
       </SelectContent>
