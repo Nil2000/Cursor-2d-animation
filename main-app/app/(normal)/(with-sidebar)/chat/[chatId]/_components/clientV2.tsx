@@ -448,6 +448,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                   />
                 ) : (
                   <AssistantBubble
+                    body={message.body}
                     error={message.error}
                     chat_videos={message.chat_videos}
                     onVideoClick={handleOpenVideoDialog}
