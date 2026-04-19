@@ -6,6 +6,7 @@ import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
 import AssistantLoadingBubble from "./assistant-loading-bubble";
+import MachineLogo from "./machine-logo";
 import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
@@ -250,8 +251,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           type: Role.Assistant,
           body: success.body,
           contextId: null,
-          chat_videos:
-            success.videos.length > 0 ? success.videos : undefined,
+          chat_videos: success.videos.length > 0 ? success.videos : undefined,
         },
       ]);
 
@@ -430,15 +430,29 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   }
 
   return (
-    <>
-      <div className="relative overflow-y-auto">
-        <div
-          className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-14rem)] scroll-smooth items-center"
-          ref={messageContainerRef}
-        >
+    <div className="flex flex-col h-[calc(100dvh-5rem)] w-full relative">
+      <div className="flex-1 overflow-y-auto w-full" ref={messageContainerRef}>
+        <div className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 pb-40 scroll-smooth items-center w-full">
+          {messages.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center text-center mt-32 gap-4 text-muted-foreground w-full">
+              <MachineLogo
+                className="w-16 h-16 bg-secondary/50"
+                iconSize={32}
+              />
+              <div>
+                <h2 className="text-xl font-medium text-foreground">
+                  How can I help you today?
+                </h2>
+                <p className="text-sm mt-2 max-w-sm mx-auto">
+                  Type a prompt below to generate a new animation. I will write
+                  the code and render a video for you.
+                </p>
+              </div>
+            </div>
+          )}
           {messages.length > 0 &&
             messages.map((message, index) => (
-              <div key={index} className="w-full">
+              <div key={message.id || index} className="w-full">
                 {message.type === "user" ? (
                   <UserBubble
                     messageBody={message.body}
@@ -463,8 +477,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           )}
         </div>
       </div>
-      <div className="absolute bottom-0 flex justify-center w-full px-6 py-2 mr-2 gap-4 z-10">
-        <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
+      <div className="absolute bottom-0 left-0 right-0 flex justify-center w-full px-4 py-4 bg-linear-to-t from-background via-background to-transparent z-10 pointer-events-none">
+        <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2 shadow-lg border-border/40 pointer-events-auto">
           {!canSendMessage && !creditsLoading && (
             <div className="text-xs text-red-500 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-md border border-red-200 dark:border-red-900">
               ⚠️ No credits available. Please purchase more credits to continue
@@ -504,6 +518,6 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         showDialog={videoDialogOpen}
         onDialogClose={() => setVideoDialogOpen(false)}
       />
-    </>
+    </div>
   );
 }
