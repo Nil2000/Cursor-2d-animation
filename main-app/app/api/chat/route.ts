@@ -1,6 +1,6 @@
 import { addChatToSpace } from "@/lib/chat-utils/spaceActions";
 import {
-  createChatGenerationStreamResponse,
+  createChatGenerationResponse,
   TOTAL_VIDEO_COST,
   INSUFFICIENT_CREDITS_MESSAGE,
 } from "@/lib/chat-utils/chatGeneration";
@@ -97,7 +97,9 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    return createChatGenerationStreamResponse({
+    console.log(messages);
+
+    return createChatGenerationResponse({
       chatId,
       messages,
       isPremium,

@@ -36,10 +36,10 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [limit, setLimit] = React.useState(5);
   const [history, setHistory] = React.useState<{ id: string; title: string }[]>(
-    []
+    [],
   );
   const [triggerCheckHistory, setTriggerCheckHistory] = React.useState(false);
-  
+
   // Credits state
   const [credits, setCredits] = React.useState<number>(0);
   const [isPremium, setIsPremium] = React.useState<boolean>(false);
@@ -66,7 +66,7 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       const data = await response.json();
-      console.log("credits data from context", data);
+      // console.log("credits data from context", data);
       setCredits(data.credits);
       setIsPremium(data.isPremium);
     } catch (err) {
@@ -93,7 +93,16 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
       creditsLoading,
       refetchCredits: fetchCredits,
     }),
-    [limit, setLimit, history, getChatSpaceHistory, triggerCheck, credits, isPremium, creditsLoading]
+    [
+      limit,
+      setLimit,
+      history,
+      getChatSpaceHistory,
+      triggerCheck,
+      credits,
+      isPremium,
+      creditsLoading,
+    ],
   );
 
   React.useEffect(() => {

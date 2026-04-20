@@ -7,9 +7,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, AlertCircle } from "lucide-react";
 import { ClientMessageVideoType } from "@/lib/types";
-import VideoSelect from "./video-select";
+import VideoSelect, { getQualityLabel } from "./video-select";
 
 export default function VideoDialogShowCase({
   videos,
@@ -23,6 +23,7 @@ export default function VideoDialogShowCase({
   const [selectedQuality, setSelectedQuality] =
     React.useState<string>("medium");
   const [isDownloading, setIsDownloading] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
   // Get the currently selected video based on quality
   const selectedVideo = React.useMemo(() => {
@@ -33,16 +34,18 @@ export default function VideoDialogShowCase({
   React.useEffect(() => {
     if (showDialog) {
       setSelectedQuality("medium");
+      setDownloadError(null);
     }
   }, [showDialog]);
 
   const handleDownload = async () => {
     if (!selectedVideo?.url) {
-      console.error("No video URL available for download");
+      setDownloadError("No video URL available for download");
       return;
     }
 
     setIsDownloading(true);
+    setDownloadError(null);
 
     try {
       const response = await fetch(selectedVideo.url, {
@@ -75,19 +78,11 @@ export default function VideoDialogShowCase({
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Error downloading video:", error);
+      setDownloadError("Failed to download the video. Please try again.");
     } finally {
       setIsDownloading(false);
     }
   };
-
-  // const getQualityLabel = (quality: string) => {
-  //   const labels: Record<string, string> = {
-  //     high: "High (1080p)",
-  //     medium: "Medium (720p)",
-  //     low: "Low (480p)",
-  //   };
-  //   return labels[quality] || quality;
-  // };
 
   return (
     <Dialog open={showDialog} onOpenChange={onDialogClose}>
@@ -95,19 +90,45 @@ export default function VideoDialogShowCase({
         <DialogHeader>
           <DialogTitle>Generated Video</DialogTitle>
         </DialogHeader>
-        {selectedVideo?.url && (
-          <div className="aspect-video w-full">
+        {selectedVideo?.url ? (
+          <div className="aspect-video w-full bg-black rounded-md overflow-hidden flex items-center justify-center">
             <video
               key={selectedVideo.url}
               src={selectedVideo.url}
               controls
-              className="w-full h-full rounded-md"
+              className="w-full h-full"
               autoPlay
             />
           </div>
+        ) : (
+          <div className="aspect-video w-full bg-muted rounded-md flex flex-col items-center justify-center text-muted-foreground gap-3">
+            {selectedVideo?.status === "pending" ? (
+              <>
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <p>Video is still being generated...</p>
+              </>
+            ) : selectedVideo?.status === "failed" ? (
+              <>
+                <AlertCircle className="w-8 h-8 text-destructive" />
+                <p className="text-destructive">Failed to generate this quality</p>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-8 h-8" />
+                <p>Video is unavailable</p>
+              </>
+            )}
+          </div>
         )}
+        
+        {downloadError && (
+          <div className="text-sm text-destructive text-center">
+            {downloadError}
+          </div>
+        )}
+        
         <DialogFooter className="flex-col sm:flex-row gap-3">
-          <div className="flex flex-col sm:flex-row gap-3 w-full items-center">
+          <div className="flex flex-col sm:flex-row gap-3 w-full items-center justify-between">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Quality:</label>
               <VideoSelect
@@ -133,7 +154,7 @@ export default function VideoDialogShowCase({
               ) : (
                 <>
                   <Download className="h-4 w-4" />
-                  Download
+                  Download {getQualityLabel(selectedQuality)}
                 </>
               )}
             </Button>
