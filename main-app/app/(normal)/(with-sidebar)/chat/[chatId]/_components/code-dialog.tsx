@@ -1,13 +1,12 @@
 import React from "react";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 
 type Props = {
   code: string;

@@ -52,7 +52,7 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
         setHistory(response.data);
       })
       .catch((error) => {
-        // console.error("Error fetching chat history:", error);
+        console.error("Error fetching chat history:", error);
       });
   };
 
@@ -70,7 +70,7 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
       setCredits(data.credits);
       setIsPremium(data.isPremium);
     } catch (err) {
-      // console.error("Error fetching credits:", err);
+      console.error("Error fetching credits:", err);
     } finally {
       setCreditsLoading(false);
     }

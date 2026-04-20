@@ -1,6 +1,5 @@
 import React, { memo } from "react";
 import { Card } from "./ui/card";
-import { Button } from "./ui/button";
 import { ClientMessageVideoType } from "@/lib/types";
 import { ShimmeringText } from "./shimmering-text";
 import { Play } from "lucide-react";
@@ -22,7 +21,7 @@ const VideoMessage = memo(
             wave
           />
         ) : video.status === "completed" && video.url ? (
-          <Card 
+          <Card
             className="relative rounded-md shadow-sm overflow-hidden cursor-pointer group"
             onClick={() => onVideoClick?.(video)}
             style={{ width: "320px", aspectRatio: "16/9" }}
@@ -48,7 +47,7 @@ const VideoMessage = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 VideoMessage.displayName = "VideoMessage";
