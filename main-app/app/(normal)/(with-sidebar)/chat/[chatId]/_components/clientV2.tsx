@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
 import AssistantBubble from "./assistant-bubble";
+import AssistantLoadingBubble from "./assistant-loading-bubble";
+import MachineLogo from "./machine-logo";
 import { Loader, Send } from "lucide-react";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import {
+  ChatGenerationApiSuccess,
   ClientMessageType,
   Role,
   UserInfoType,
@@ -152,7 +155,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         return;
       }
 
-      console.log(`Starting video polling for ${videoId}`);
+      // console.log(`Starting video polling for ${videoId}`);
 
       // Poll immediately
       pollVideoStatus(videoId);
@@ -171,12 +174,12 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     const key = `user/${userInfo.id}`;
     const localStorageData = localStorage.getItem(key);
     if (!localStorageData) {
-      console.log("no data");
+      // console.log("no data");
       return null;
     }
     const userData = JSON.parse(localStorageData);
     if (!userData.lastSearchedFor) {
-      console.log("no last searched for");
+      // console.log("no last searched for");
       return null;
     }
 
@@ -193,174 +196,87 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     const res = await axios.get(`/api/chat/${chatId}`);
 
     if (res.status !== 200) {
-      console.log("error", res);
+      // console.log("error", res);
       router.push("/");
       return;
     }
     setMessages(res.data.messages);
   };
 
-  const processStream = async (response: Response) => {
-    if (!response.ok) {
-      console.log("error", response);
-      throw new Error("Error processing stream");
-    }
-    const tempMessageId = `msg-${Date.now()}`;
-    let streamMetadata: {
-      chatId?: string;
-      videos?: Array<ClientMessageVideoType>;
-    } = {};
-
+  const handleChatApiResponse = async (
+    response: Response,
+    resyncOnFailure?: () => void | Promise<void>,
+  ) => {
     try {
-      const reader = response.body?.getReader();
-      if (!reader) {
-        console.log("no reader");
-        throw new Error("No reader");
+      const raw = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        if (resyncOnFailure) {
+          await resyncOnFailure();
+        } else {
+          const errMsg =
+            raw &&
+            typeof raw === "object" &&
+            "error" in raw &&
+            typeof (raw as { error: unknown }).error === "string"
+              ? (raw as { error: string }).error
+              : "Request failed";
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `msg-${Date.now()}`,
+              type: Role.Assistant,
+              body: "",
+              error: errMsg,
+              contextId: null,
+            },
+          ]);
+        }
+        return;
+      }
+
+      const success = raw as ChatGenerationApiSuccess;
+      if (
+        !success ||
+        typeof success.body !== "string" ||
+        !Array.isArray(success.videos)
+      ) {
+        throw new Error("Invalid response shape");
       }
 
       setMessages((prev) => [
         ...prev,
         {
-          id: tempMessageId,
+          id: `msg-${Date.now()}`,
           type: Role.Assistant,
-          body: "",
+          body: success.body,
           contextId: null,
+          chat_videos: success.videos.length > 0 ? success.videos : undefined,
         },
       ]);
 
-      let accumulatedContent = "";
-      let buffer = "";
-      let updateTimeout: NodeJS.Timeout | null = null;
-
-      const updateMessage = (body: string) => {
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        updateTimeout = setTimeout(() => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempMessageId ? { ...msg, body } : msg,
-            ),
-          );
-        }, 50);
-      };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempMessageId
-                ? { ...msg, body: accumulatedContent }
-                : msg,
-            ),
-          );
-
-          if (updateTimeout) {
-            clearTimeout(updateTimeout);
-          }
-          break;
-        }
-        const chunk = new TextDecoder().decode(value);
-        buffer += chunk;
-
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        let hasNewContent = false;
-
-        for (const line of lines) {
-          if (line.trim() === "") continue;
-
-          if (line.startsWith("data: ")) {
-            const data = line.substring(6);
-
-            if (data === "[DONE]") {
-              continue;
-            }
-
-            try {
-              const parsedData = JSON.parse(data) as {
-                content?: string;
-                type: string;
-                chatId?: string;
-                videos?: Array<ClientMessageVideoType>;
-              };
-
-              // Handle metadata
-              if (parsedData.type === "metadata") {
-                streamMetadata = {
-                  chatId: parsedData.chatId,
-                  videos: parsedData.videos,
-                };
-                console.log("Received stream metadata:", streamMetadata);
-                continue;
-              }
-
-              // Handle content
-              const content = parsedData.content;
-              if (content) {
-                accumulatedContent += content;
-                hasNewContent = true;
-              }
-            } catch (e) {
-              console.error("Error parsing JSON:", e, "Raw data:", data);
-              // If it's not JSON, treat it as raw text (fallback)
-              if (data && data !== "[DONE]") {
-                accumulatedContent += data;
-                hasNewContent = true;
-              }
-            }
-          } else if (line.trim()) {
-            // Handle non-SSE format as fallback
-            accumulatedContent += line;
-            hasNewContent = true;
-          }
-        }
-        if (hasNewContent) {
-          updateMessage(accumulatedContent);
-        }
-      }
-
-      // After stream is complete, you can use the metadata
-      if (
-        streamMetadata.chatId &&
-        streamMetadata.videos &&
-        typeof streamMetadata.chatId === "string"
-      ) {
-        console.log("Stream completed with video ID:", streamMetadata.chatId);
-        setMessages((prev) =>
-          prev.map((msg) => {
-            if (msg.id === tempMessageId) {
-              return {
-                ...msg,
-                chat_videos: [
-                  ...(msg.chat_videos || []),
-                  ...(streamMetadata.videos || []),
-                ],
-              };
-            }
-            return msg;
-          }),
-        );
-        // Start polling for each video
-        for (const video of streamMetadata.videos) {
+      if (success.videos.length > 0) {
+        for (const video of success.videos) {
           startVideoPolling(video.id);
         }
-        // Refetch credits after video generation is initiated
         refetchCredits();
       }
     } catch (error) {
-      console.log("error", error);
-      console.error("Error processing stream:", error);
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessageId
-            ? { ...msg, content: "Error: Failed to process response" }
-            : msg,
-        ),
-      );
+      console.error("Error handling chat response:", error);
+      if (resyncOnFailure) {
+        await resyncOnFailure();
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            type: Role.Assistant,
+            body: "",
+            error: "Failed to process response",
+            contextId: null,
+          },
+        ]);
+      }
     } finally {
       setLoading(false);
       abortController.current = null;
@@ -389,31 +305,23 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     abortController.current = new AbortController();
 
     try {
-      setTimeout(() => {
-        void (async () => {
-          try {
-            const response = await fetch(`/api/chat`, {
-              method: "POST",
-              body: JSON.stringify({
-                message: input,
-                chatId: chatId,
-              }),
-              signal: abortController.current?.signal,
-            });
+      const response = await fetch(`/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          chatId: chatId,
+        }),
+        signal: abortController.current?.signal,
+      });
 
-            await processStream(response);
-          } catch (error) {
-            if ((error as Error).name !== "AbortError") {
-              console.error("Error sending message:", error);
-            }
-            setLoading(false);
-          }
-        })();
-      }, 0);
+      await handleChatApiResponse(response);
     } catch (error) {
-      console.error("Error preparing request:", error);
-    } finally {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error sending message:", error);
+      }
       setLoading(false);
+      abortController.current = null;
     }
   };
 
@@ -436,33 +344,34 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
       const response = await fetch(`/api/chat/retry`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chatId: chatId,
         }),
         signal: abortController.current?.signal,
       });
 
-      await processStream(response);
+      await handleChatApiResponse(response, getChatHistory);
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         console.error("Error retrying message:", error);
-        // Refresh the chat history on error to restore the correct state
-        getChatHistory();
+        await getChatHistory();
       }
       setLoading(false);
+      abortController.current = null;
     }
   };
 
   const init = async () => {
     setSpaceLoading(false);
-    console.log("init", chatId, spaceExists, userInfo);
+    // console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
-      console.log("no chat space");
+      // console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
 
       if (!message) {
         router.push("/chat");
-        console.log("no message");
+        // console.log("no message");
         return;
       }
       handleSendMessage(message);
@@ -485,7 +394,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
   React.useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, loading]);
 
   // Cleanup polling intervals when component unmounts or chatId changes
   React.useEffect(() => {
@@ -521,15 +430,29 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   }
 
   return (
-    <>
-      <div className="relative overflow-y-auto">
-        <div
-          className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 h-[calc(100vh-14rem)] scroll-smooth items-center"
-          ref={messageContainerRef}
-        >
+    <div className="flex flex-col h-[calc(100dvh-5rem)] w-full relative">
+      <div className="flex-1 overflow-y-auto w-full" ref={messageContainerRef}>
+        <div className="flex flex-col gap-4 lg:max-w-[1000px] mx-auto p-4 pb-40 scroll-smooth items-center w-full">
+          {messages.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center text-center mt-32 gap-4 text-muted-foreground w-full">
+              <MachineLogo
+                className="w-16 h-16 bg-secondary/50"
+                iconSize={32}
+              />
+              <div>
+                <h2 className="text-xl font-medium text-foreground">
+                  How can I help you today?
+                </h2>
+                <p className="text-sm mt-2 max-w-sm mx-auto">
+                  Type a prompt below to generate a new animation. I will write
+                  the code and render a video for you.
+                </p>
+              </div>
+            </div>
+          )}
           {messages.length > 0 &&
             messages.map((message, index) => (
-              <div key={index} className="w-full">
+              <div key={message.id || index} className="w-full">
                 {message.type === "user" ? (
                   <UserBubble
                     messageBody={message.body}
@@ -539,7 +462,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                   />
                 ) : (
                   <AssistantBubble
-                    messageBody={message.body}
+                    body={message.body}
                     error={message.error}
                     chat_videos={message.chat_videos}
                     onVideoClick={handleOpenVideoDialog}
@@ -547,10 +470,15 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
                 )}
               </div>
             ))}
+          {loading && (
+            <div className="w-full">
+              <AssistantLoadingBubble />
+            </div>
+          )}
         </div>
       </div>
-      <div className="absolute bottom-0 flex justify-center w-full px-6 py-2 mr-2 gap-4 z-10">
-        <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2">
+      <div className="absolute bottom-0 left-0 right-0 flex justify-center w-full px-4 py-4 bg-linear-to-t from-background via-background to-transparent z-10 pointer-events-none">
+        <Card className="w-full lg:max-w-[1000px] rounded-lg min-h-16 p-2 flex flex-col justify-between gap-2 shadow-lg border-border/40 pointer-events-auto">
           {!canSendMessage && !creditsLoading && (
             <div className="text-xs text-red-500 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded-md border border-red-200 dark:border-red-900">
               ⚠️ No credits available. Please purchase more credits to continue
@@ -590,6 +518,6 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         showDialog={videoDialogOpen}
         onDialogClose={() => setVideoDialogOpen(false)}
       />
-    </>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const videoPayloadSchema = z.object({
   id: z.string().min(1),
+  quality: z.string().optional(),
 });
 
 export const uploadVideoPayloadSchema = z.object({

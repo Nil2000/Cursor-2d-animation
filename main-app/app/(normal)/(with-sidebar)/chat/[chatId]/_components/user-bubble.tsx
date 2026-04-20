@@ -17,15 +17,10 @@ const UserBubble = React.memo(function UserBubble({
   retry,
   retryHandler,
 }: Props) {
-  const [hovered, setHovered] = React.useState(false);
   return (
-    <div className="flex justify-end items-start">
-      {retry && hovered && (
-        <div
-          className="flex gap-2 -mr-2 px-4"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
+    <div className="flex justify-end items-start group">
+      {retry && (
+        <div className="flex gap-2 -mr-2 px-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <Button
             size={"icon"}
             variant="outline"
@@ -36,11 +31,7 @@ const UserBubble = React.memo(function UserBubble({
           </Button>
         </div>
       )}
-      <Card
-        className="p-4 sm:max-w-3/4 rounded-md shadow-none bg-primary text-primary-foreground mr-2"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
+      <Card className="sm:max-w-[75%] rounded-md shadow-none bg-primary text-primary-foreground mr-2 px-3 py-2">
         {messageBody}
       </Card>
       <UserAvatar imgUrl={imgUrl} />

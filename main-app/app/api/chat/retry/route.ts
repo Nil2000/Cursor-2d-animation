@@ -1,5 +1,5 @@
 import {
-  createChatGenerationStreamResponse,
+  createChatGenerationResponse,
   TOTAL_VIDEO_COST,
   INSUFFICIENT_CREDITS_MESSAGE,
 } from "@/lib/chat-utils/chatGeneration";
@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
     // Use the remaining chats for context while keeping the last assistant message intact until retry succeeds
     const remainingChats = existingChats.slice(0, -1);
 
-    // Prepare messages for streaming (remaining chats)
     const messages: Messages = remainingChats.map((chat) => ({
       content: chat.body,
       role: chat.type === "user" ? Role.User : Role.Assistant,
@@ -90,7 +89,7 @@ export async function POST(req: NextRequest) {
     // Check if this is the first conversation after deletion
     const isFirstConversation = remainingChats.length === 1;
 
-    return createChatGenerationStreamResponse({
+    return createChatGenerationResponse({
       chatId,
       messages,
       isPremium,
