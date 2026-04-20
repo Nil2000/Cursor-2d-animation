@@ -44,7 +44,7 @@ const AssistantBubble = React.memo(function AssistantBubble({
     <div className="flex justify-start items-start gap-2">
       <MachineLogo />
       {error ? (
-        <Card className="p-4 sm:max-w-3/4 max-w-full w-max rounded-md bg-red-100 text-red-800 shadow-none">
+        <Card className="p-4 sm:max-w-[75%] max-w-full w-max rounded-md bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-none">
           <p>Error: {error}</p>
         </Card>
       ) : (

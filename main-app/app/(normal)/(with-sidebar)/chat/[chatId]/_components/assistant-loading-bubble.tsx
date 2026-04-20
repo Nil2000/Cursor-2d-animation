@@ -11,9 +11,9 @@ const AssistantLoadingBubble = React.memo(function AssistantLoadingBubble() {
         <p className="text-sm text-muted-foreground mb-3">
           Generating your animation
           <span className="inline-flex gap-0.5 ml-0.5" aria-hidden>
-            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
-            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
-            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
+            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground motion-safe:animate-bounce [animation-delay:0ms]" />
+            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground motion-safe:animate-bounce [animation-delay:150ms]" />
+            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground motion-safe:animate-bounce [animation-delay:300ms]" />
           </span>
         </p>
         <div className="space-y-2">

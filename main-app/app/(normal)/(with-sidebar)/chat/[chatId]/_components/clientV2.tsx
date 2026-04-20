@@ -155,7 +155,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         return;
       }
 
-      console.log(`Starting video polling for ${videoId}`);
+      // console.log(`Starting video polling for ${videoId}`);
 
       // Poll immediately
       pollVideoStatus(videoId);
@@ -174,12 +174,12 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     const key = `user/${userInfo.id}`;
     const localStorageData = localStorage.getItem(key);
     if (!localStorageData) {
-      console.log("no data");
+      // console.log("no data");
       return null;
     }
     const userData = JSON.parse(localStorageData);
     if (!userData.lastSearchedFor) {
-      console.log("no last searched for");
+      // console.log("no last searched for");
       return null;
     }
 
@@ -196,7 +196,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     const res = await axios.get(`/api/chat/${chatId}`);
 
     if (res.status !== 200) {
-      console.log("error", res);
+      // console.log("error", res);
       router.push("/");
       return;
     }
@@ -364,14 +364,14 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
   const init = async () => {
     setSpaceLoading(false);
-    console.log("init", chatId, spaceExists, userInfo);
+    // console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
-      console.log("no chat space");
+      // console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
 
       if (!message) {
         router.push("/chat");
-        console.log("no message");
+        // console.log("no message");
         return;
       }
       handleSendMessage(message);
