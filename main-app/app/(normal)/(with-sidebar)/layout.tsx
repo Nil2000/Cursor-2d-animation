@@ -22,7 +22,10 @@ export default async function Layout({
     notFound();
   }
   return (
-    <ChatPageProvider>
+    <ChatPageProvider
+      userId={session.user.id}
+      notifyServerUrl={process.env.NOTIFY_SERVER_URL ?? null}
+    >
       <SidebarProvider defaultOpen={defaultOpen}>
         <ChatSidebar userInfo={session?.user} />
         <SidebarInset>

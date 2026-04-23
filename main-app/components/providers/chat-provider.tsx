@@ -2,6 +2,13 @@
 import axios from "axios";
 import * as React from "react";
 
+import {
+  CHAT_SPACE_CREATED_EVENT,
+  CHAT_SPACE_UPDATED_EVENT,
+  buildChatSidebarWebSocketUrl,
+  type ChatSidebarEventName,
+} from "@/lib/chat-utils/chatNotifications";
+
 // Define the shape of the context
 type ChatPageContextProps = {
   limit: number;
@@ -19,6 +26,12 @@ type ChatPageContextProps = {
   refetchCredits: () => Promise<void>;
 };
 
+type ChatPageProviderProps = {
+  children: React.ReactNode;
+  userId: string;
+  notifyServerUrl?: string | null;
+};
+
 // Create the context with default values
 const ChatPageContext = React.createContext<ChatPageContextProps | null>(null);
 
@@ -31,32 +44,57 @@ function useChatHook() {
 }
 
 // Provider component for the ChatPageContext
-const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
+const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
   children,
+  userId,
+  notifyServerUrl,
 }) => {
   const [limit, setLimit] = React.useState(5);
   const [history, setHistory] = React.useState<{ id: string; title: string }[]>(
     [],
   );
-  const [triggerCheckHistory, setTriggerCheckHistory] = React.useState(false);
+  const limitRef = React.useRef(limit);
+  const historyRequestIdRef = React.useRef(0);
 
   // Credits state
   const [credits, setCredits] = React.useState<number>(0);
   const [isPremium, setIsPremium] = React.useState<boolean>(false);
   const [creditsLoading, setCreditsLoading] = React.useState<boolean>(true);
 
-  const getChatSpaceHistory = async (limit: number) => {
-    await axios
-      .get(`/api/chat/history?limit=${limit}`)
-      .then((response) => {
-        setHistory(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching chat history:", error);
-      });
-  };
+  React.useEffect(() => {
+    limitRef.current = limit;
+  }, [limit]);
 
-  const fetchCredits = async () => {
+  const getChatSpaceHistory = React.useCallback(
+    async (historyLimit: number) => {
+      const requestId = ++historyRequestIdRef.current;
+
+      try {
+        const response = await axios.get(
+          `/api/chat/history?limit=${historyLimit}`,
+        );
+
+        if (requestId !== historyRequestIdRef.current) {
+          return;
+        }
+
+        setHistory(response.data);
+      } catch (error) {
+        if (requestId !== historyRequestIdRef.current) {
+          return;
+        }
+
+        console.error("Error fetching chat history:", error);
+      }
+    },
+    [],
+  );
+
+  const refreshHistory = React.useCallback(() => {
+    getChatSpaceHistory(limitRef.current);
+  }, [getChatSpaceHistory]);
+
+  const fetchCredits = React.useCallback(async () => {
     try {
       setCreditsLoading(true);
       const response = await fetch("/api/credits");
@@ -74,11 +112,87 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setCreditsLoading(false);
     }
-  };
+  }, []);
 
-  const triggerCheck = () => {
-    setTriggerCheckHistory((prev) => !prev);
-  };
+  const triggerCheck = React.useCallback(() => {
+    refreshHistory();
+  }, [refreshHistory]);
+
+  React.useEffect(() => {
+    refreshHistory();
+  }, [limit, refreshHistory]);
+
+  React.useEffect(() => {
+    if (!notifyServerUrl || !userId) {
+      return;
+    }
+
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const connect = () => {
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        const websocketUrl = buildChatSidebarWebSocketUrl(
+          notifyServerUrl,
+          userId,
+        );
+
+        socket = new WebSocket(websocketUrl);
+
+        socket.onopen = () => {
+          refreshHistory();
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const notification = JSON.parse(event.data as string) as {
+              event?: ChatSidebarEventName;
+            };
+
+            if (
+              notification.event === CHAT_SPACE_CREATED_EVENT ||
+              notification.event === CHAT_SPACE_UPDATED_EVENT
+            ) {
+              refreshHistory();
+            }
+          } catch (error) {
+            console.error("Error handling chat sidebar notification:", error);
+          }
+        };
+
+        socket.onerror = (error) => {
+          console.error("Chat sidebar websocket error:", error);
+        };
+
+        socket.onclose = () => {
+          if (cancelled) {
+            return;
+          }
+
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+      } catch (error) {
+        console.error("Error connecting to notify server:", error);
+      }
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+
+      socket?.close();
+    };
+  }, [notifyServerUrl, refreshHistory, userId]);
 
   const contextValue = React.useMemo(
     () => ({
@@ -96,32 +210,21 @@ const ChatPageProvider: React.FC<{ children: React.ReactNode }> = ({
     [
       limit,
       setLimit,
+      setHistory,
       history,
-      getChatSpaceHistory,
-      triggerCheck,
       credits,
       isPremium,
       creditsLoading,
+      getChatSpaceHistory,
+      triggerCheck,
+      fetchCredits,
     ],
   );
-
-  React.useEffect(() => {
-    getChatSpaceHistory(limit);
-  }, [triggerCheckHistory]);
 
   // Fetch credits on mount
   React.useEffect(() => {
     fetchCredits();
-  }, []);
-
-  // Auto-refresh chat history every 5 seconds
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      getChatSpaceHistory(limit);
-    }, 5000); // 5 seconds
-
-    return () => clearInterval(interval);
-  }, [limit, getChatSpaceHistory]);
+  }, [fetchCredits]);
 
   return (
     <ChatPageContext.Provider value={contextValue}>

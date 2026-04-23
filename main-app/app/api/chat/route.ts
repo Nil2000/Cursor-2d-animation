@@ -11,6 +11,8 @@ import { Messages, Role } from "@/lib/types";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
+import { CHAT_SPACE_CREATED_EVENT } from "@/lib/chat-utils/chatNotifications";
+import { publishChatNotification } from "@/lib/chat-utils/publishChatNotification";
 
 export async function POST(req: NextRequest) {
   const { chatId, message } = await req.json();
@@ -81,6 +83,12 @@ export async function POST(req: NextRequest) {
           type: "user",
         });
       });
+
+      await publishChatNotification({
+        userId: session.user.id,
+        event: CHAT_SPACE_CREATED_EVENT,
+        payload: { chatSpaceId: chatId },
+      });
     } else {
       // Just add the new chat to existing space
       await addChatToSpace(chatId, "user", message);
@@ -97,7 +105,7 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    console.log(messages);
+    // console.log(messages);
 
     return createChatGenerationResponse({
       chatId,
