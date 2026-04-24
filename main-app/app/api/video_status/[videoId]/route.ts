@@ -1,7 +1,11 @@
 import { db } from "@/lib/db";
-import { chat_video } from "@/lib/schema";
+import { chat, chat_video, chat_space } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  CHAT_VIDEO_STATUS_UPDATED_EVENT,
+} from "@/lib/chat-utils/chatNotifications";
+import { publishChatNotification } from "@/lib/chat-utils/publishChatNotification";
 
 export async function GET(
   req: NextRequest,
@@ -76,6 +80,35 @@ export async function POST(
         updatedAt: new Date(),
       })
       .where(eq(chat_video.id, videoId));
+
+    const video = await db
+      .select({
+        chatId: chat_video.chatId,
+      })
+      .from(chat_video)
+      .where(eq(chat_video.id, videoId))
+      .limit(1);
+
+    if (video[0]?.chatId) {
+      const chatOwner = await db
+        .select({
+          userId: chat_space.userId,
+        })
+        .from(chat)
+        .innerJoin(chat_space, eq(chat.chatSpaceId, chat_space.id))
+        .where(eq(chat.id, video[0].chatId))
+        .limit(1);
+
+      if (chatOwner[0]?.userId) {
+        await publishChatNotification({
+          userId: chatOwner[0].userId,
+          event: CHAT_VIDEO_STATUS_UPDATED_EVENT,
+          payload: {
+            chatId: video[0].chatId,
+          },
+        });
+      }
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

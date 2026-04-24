@@ -20,6 +20,10 @@ import {
 import { Card } from "@/components/ui/card";
 import VideoDialogShowCase from "./video-showcase-dialog";
 import { useChatHook } from "@/components/providers/chat-provider";
+import {
+  CHAT_VIDEO_STATUS_UPDATED_EVENT,
+  type ChatNotification,
+} from "@/lib/chat-utils/chatNotifications";
 
 type Props = {
   chatId: string;
@@ -41,9 +45,9 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
-  const pollingIntervals = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
   const router = useRouter();
-  const { usersCredits, creditsLoading, refetchCredits } = useChatHook();
+  const { usersCredits, creditsLoading, refetchCredits, subscribeToNotifications } =
+    useChatHook();
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -85,92 +89,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     return hasFailedVideos || false;
   }, [messages, loading, usersCredits]);
 
-  const pollVideoStatus = React.useCallback(
-    async (videoId: string) => {
-      try {
-        const response = await fetch(`/api/video_status/${videoId}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const videoStatus = await response.json();
-
-        // Update the message with the new video status
-        setMessages((prev) =>
-          prev.map((msg) => ({
-            ...msg,
-            chat_videos: msg.chat_videos?.map((video) =>
-              video.id === videoId
-                ? { ...video, status: videoStatus.status, url: videoStatus.url }
-                : video,
-            ),
-          })),
-        );
-
-        // If video is completed or failed, stop polling
-        if (
-          videoStatus.status === "completed" ||
-          videoStatus.status === "failed"
-        ) {
-          const interval = pollingIntervals.current.get(videoId);
-          if (interval) {
-            clearInterval(interval);
-            pollingIntervals.current.delete(videoId);
-          }
-          console.log(
-            `Video ${videoId} polling stopped. Status: ${videoStatus.status}`,
-          );
-        }
-      } catch (error) {
-        console.error(`Error polling video status for ${videoId}:`, error);
-
-        // On error, mark video as failed and stop polling
-        setMessages((prev) =>
-          prev.map((msg) => ({
-            ...msg,
-            chat_videos: msg.chat_videos?.map((video) =>
-              video.id === videoId
-                ? { ...video, status: "failed" as const }
-                : video,
-            ),
-          })),
-        );
-
-        const interval = pollingIntervals.current.get(videoId);
-        if (interval) {
-          clearInterval(interval);
-          pollingIntervals.current.delete(videoId);
-        }
-      } finally {
-        refetchCredits();
-      }
-    },
-    [refetchCredits],
-  );
-
-  const startVideoPolling = React.useCallback(
-    (videoId: string) => {
-      // Don't start polling if already polling this video
-      if (pollingIntervals.current.has(videoId)) {
-        return;
-      }
-
-      // console.log(`Starting video polling for ${videoId}`);
-
-      // Poll immediately
-      pollVideoStatus(videoId);
-
-      // Then poll every 3 seconds
-      const interval = setInterval(() => {
-        pollVideoStatus(videoId);
-      }, 3000);
-
-      pollingIntervals.current.set(videoId, interval);
-    },
-    [pollVideoStatus],
-  );
-
-  const getLastMessageFromLocalStorage = () => {
+  const getLastMessageFromLocalStorage = React.useCallback(() => {
     const key = `user/${userInfo.id}`;
     const localStorageData = localStorage.getItem(key);
     if (!localStorageData) {
@@ -190,9 +109,9 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     localStorage.removeItem(key);
 
     return messageText;
-  };
+  }, [userInfo.id]);
 
-  const getChatHistory = async () => {
+  const getChatHistory = React.useCallback(async () => {
     const res = await axios.get(`/api/chat/${chatId}`);
 
     if (res.status !== 200) {
@@ -201,131 +120,134 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       return;
     }
     setMessages(res.data.messages);
-  };
+  }, [chatId, router]);
 
-  const handleChatApiResponse = async (
-    response: Response,
-    resyncOnFailure?: () => void | Promise<void>,
-  ) => {
-    try {
-      const raw = await response.json().catch(() => null);
+  const handleChatApiResponse = React.useCallback(
+    async (
+      response: Response,
+      resyncOnFailure?: () => void | Promise<void>,
+    ) => {
+      try {
+        const raw = await response.json().catch(() => null);
 
-      if (!response.ok) {
+        if (!response.ok) {
+          if (resyncOnFailure) {
+            await resyncOnFailure();
+          } else {
+            const errMsg =
+              raw &&
+              typeof raw === "object" &&
+              "error" in raw &&
+              typeof (raw as { error: unknown }).error === "string"
+                ? (raw as { error: string }).error
+                : "Request failed";
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `msg-${Date.now()}`,
+                type: Role.Assistant,
+                body: "",
+                error: errMsg,
+                contextId: null,
+              },
+            ]);
+          }
+          return;
+        }
+
+        const success = raw as ChatGenerationApiSuccess;
+        if (
+          !success ||
+          typeof success.body !== "string" ||
+          !Array.isArray(success.videos)
+        ) {
+          throw new Error("Invalid response shape");
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            type: Role.Assistant,
+            body: success.body,
+            contextId: null,
+            chat_videos: success.videos.length > 0 ? success.videos : undefined,
+          },
+        ]);
+
+        if (success.videos.length > 0) {
+          void refetchCredits();
+        }
+      } catch (error) {
+        console.error("Error handling chat response:", error);
         if (resyncOnFailure) {
           await resyncOnFailure();
         } else {
-          const errMsg =
-            raw &&
-            typeof raw === "object" &&
-            "error" in raw &&
-            typeof (raw as { error: unknown }).error === "string"
-              ? (raw as { error: string }).error
-              : "Request failed";
           setMessages((prev) => [
             ...prev,
             {
               id: `msg-${Date.now()}`,
               type: Role.Assistant,
               body: "",
-              error: errMsg,
+              error: "Failed to process response",
               contextId: null,
             },
           ]);
         }
+      } finally {
+        setLoading(false);
+        abortController.current = null;
+      }
+    },
+    [refetchCredits],
+  );
+
+  const handleSendMessage = React.useCallback(
+    async (input: string) => {
+      if (!input || input.trim().length === 0) {
         return;
       }
-
-      const success = raw as ChatGenerationApiSuccess;
-      if (
-        !success ||
-        typeof success.body !== "string" ||
-        !Array.isArray(success.videos)
-      ) {
-        throw new Error("Invalid response shape");
+      if (usersCredits === 0) {
+        return;
       }
+      const userInput = {
+        id: `msg-${Date.now()}`,
+        type: Role.User,
+        body: input,
+      };
+      setMessages((prev) => [...prev, userInput]);
+      setInputText("");
+      setLoading(true);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg-${Date.now()}`,
-          type: Role.Assistant,
-          body: success.body,
-          contextId: null,
-          chat_videos: success.videos.length > 0 ? success.videos : undefined,
-        },
-      ]);
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+      abortController.current = new AbortController();
 
-      if (success.videos.length > 0) {
-        for (const video of success.videos) {
-          startVideoPolling(video.id);
+      try {
+        const response = await fetch(`/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: input,
+            chatId: chatId,
+          }),
+          signal: abortController.current?.signal,
+        });
+
+        await handleChatApiResponse(response);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          console.error("Error sending message:", error);
         }
-        refetchCredits();
+        setLoading(false);
+        abortController.current = null;
       }
-    } catch (error) {
-      console.error("Error handling chat response:", error);
-      if (resyncOnFailure) {
-        await resyncOnFailure();
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-${Date.now()}`,
-            type: Role.Assistant,
-            body: "",
-            error: "Failed to process response",
-            contextId: null,
-          },
-        ]);
-      }
-    } finally {
-      setLoading(false);
-      abortController.current = null;
-    }
-  };
+    },
+    [chatId, handleChatApiResponse, usersCredits],
+  );
 
-  const handleSendMessage = async (input: string) => {
-    if (!input || input.trim().length === 0) {
-      return;
-    }
-    if (usersCredits === 0) {
-      return;
-    }
-    const userInput = {
-      id: `msg-${Date.now()}`,
-      type: Role.User,
-      body: input,
-    };
-    setMessages((prev) => [...prev, userInput]);
-    setInputText("");
-    setLoading(true);
-
-    if (abortController.current) {
-      abortController.current.abort();
-    }
-    abortController.current = new AbortController();
-
-    try {
-      const response = await fetch(`/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: input,
-          chatId: chatId,
-        }),
-        signal: abortController.current?.signal,
-      });
-
-      await handleChatApiResponse(response);
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        console.error("Error sending message:", error);
-      }
-      setLoading(false);
-      abortController.current = null;
-    }
-  };
-
-  const handleRetry = async () => {
+  const handleRetry = React.useCallback(async () => {
     // Check credits before retrying
     if (usersCredits === 0) {
       return;
@@ -360,9 +282,9 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       setLoading(false);
       abortController.current = null;
     }
-  };
+  }, [chatId, getChatHistory, handleChatApiResponse, usersCredits]);
 
-  const init = async () => {
+  const init = React.useCallback(async () => {
     setSpaceLoading(false);
     // console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
@@ -379,7 +301,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       // get Chat history
       getChatHistory();
     }
-  };
+  }, [getChatHistory, getLastMessageFromLocalStorage, handleSendMessage, router, spaceExists]);
 
   const scrollToBottom = () => {
     if (messageContainerRef.current) {
@@ -389,37 +311,59 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   };
 
   React.useEffect(() => {
-    init();
-  }, []);
+    void init();
+  }, [init]);
 
   React.useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Cleanup polling intervals when component unmounts or chatId changes
   React.useEffect(() => {
-    return () => {
-      // Clear all polling intervals
-      pollingIntervals.current.forEach((interval) => {
-        clearInterval(interval);
-      });
-      pollingIntervals.current.clear();
-    };
-  }, [chatId]);
+    if (!videoDialogOpen || selectedVideos.length === 0) {
+      return;
+    }
 
-  // Also start polling for any existing pending videos when component mounts
-  React.useEffect(() => {
+    const videosById = new Map<string, ClientMessageVideoType>();
     messages.forEach((message) => {
       message.chat_videos?.forEach((video) => {
-        if (
-          video.status === "pending" &&
-          !pollingIntervals.current.has(video.id)
-        ) {
-          startVideoPolling(video.id);
-        }
+        videosById.set(video.id, video);
       });
     });
-  }, [messages]);
+
+    setSelectedVideos((current) => {
+      let hasChanges = false;
+
+      const nextVideos = current.map((video) => {
+        const updatedVideo = videosById.get(video.id);
+        if (
+          updatedVideo &&
+          (updatedVideo.status !== video.status || updatedVideo.url !== video.url)
+        ) {
+          hasChanges = true;
+          return updatedVideo;
+        }
+
+        return video;
+      });
+
+      return hasChanges ? nextVideos : current;
+    });
+  }, [messages, videoDialogOpen, selectedVideos.length]);
+
+  React.useEffect(() => {
+    return subscribeToNotifications((notification: ChatNotification) => {
+      if (notification.event !== CHAT_VIDEO_STATUS_UPDATED_EVENT) {
+        return;
+      }
+
+      if (notification.payload.chatId !== chatId) {
+        return;
+      }
+
+      void getChatHistory();
+      void refetchCredits();
+    });
+  }, [chatId, getChatHistory, refetchCredits, subscribeToNotifications]);
 
   if (spaceLoading) {
     return (

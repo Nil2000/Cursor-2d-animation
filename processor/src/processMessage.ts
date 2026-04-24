@@ -81,7 +81,7 @@ export async function processMessage(message: string) {
     console.error("Error processing message:", error);
     // Update all video statuses in the API with failure
     try {
-      await fetch(`${process.env.API_URL}/video_status`, {
+      const response = await fetch(`${process.env.API_URL}/video_status`, {
         method: "POST",
         headers: {
           "x-secret-key": process.env.INTERNAL_API_KEY!,
@@ -96,6 +96,16 @@ export async function processMessage(message: string) {
           })),
         }),
       });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      const responseData = await response.json();
+      console.log(
+        "Video status update response:",
+        response.status,
+        responseData,
+      );
     } catch (updateError: unknown) {
       console.error(
         "Error updating video status on failure:",

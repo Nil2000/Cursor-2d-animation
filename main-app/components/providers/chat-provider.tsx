@@ -5,8 +5,8 @@ import * as React from "react";
 import {
   CHAT_SPACE_CREATED_EVENT,
   CHAT_SPACE_UPDATED_EVENT,
-  buildChatSidebarWebSocketUrl,
-  type ChatSidebarEventName,
+  buildChatNotificationWebSocketUrl,
+  type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
 
 // Define the shape of the context
@@ -20,6 +20,9 @@ type ChatPageContextProps = {
   setHistory: (newHistory: { id: string; title: string }[]) => void;
   getChatSpaceHistory: (limit: number) => Promise<void>;
   triggerCheck: () => void;
+  subscribeToNotifications: (
+    listener: (notification: ChatNotification) => void,
+  ) => () => void;
   usersCredits: number;
   isUserPremium: boolean;
   creditsLoading: boolean;
@@ -55,6 +58,9 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
   );
   const limitRef = React.useRef(limit);
   const historyRequestIdRef = React.useRef(0);
+  const notificationListenersRef = React.useRef(
+    new Set<(notification: ChatNotification) => void>(),
+  );
 
   // Credits state
   const [credits, setCredits] = React.useState<number>(0);
@@ -118,6 +124,17 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
     refreshHistory();
   }, [refreshHistory]);
 
+  const subscribeToNotifications = React.useCallback(
+    (listener: (notification: ChatNotification) => void) => {
+      notificationListenersRef.current.add(listener);
+
+      return () => {
+        notificationListenersRef.current.delete(listener);
+      };
+    },
+    [],
+  );
+
   React.useEffect(() => {
     refreshHistory();
   }, [limit, refreshHistory]);
@@ -137,7 +154,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       }
 
       try {
-        const websocketUrl = buildChatSidebarWebSocketUrl(
+        const websocketUrl = buildChatNotificationWebSocketUrl(
           notifyServerUrl,
           userId,
         );
@@ -150,9 +167,15 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
 
         socket.onmessage = (event) => {
           try {
-            const notification = JSON.parse(event.data as string) as {
-              event?: ChatSidebarEventName;
-            };
+            const notification = JSON.parse(event.data as string) as Partial<ChatNotification>;
+
+            if (!notification.event) {
+              return;
+            }
+
+            notificationListenersRef.current.forEach((listener) => {
+              listener(notification as ChatNotification);
+            });
 
             if (
               notification.event === CHAT_SPACE_CREATED_EVENT ||
@@ -202,6 +225,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       setHistory,
       getChatSpaceHistory,
       triggerCheck,
+      subscribeToNotifications,
       usersCredits: credits,
       isUserPremium: isPremium,
       creditsLoading,
@@ -217,6 +241,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       creditsLoading,
       getChatSpaceHistory,
       triggerCheck,
+      subscribeToNotifications,
       fetchCredits,
     ],
   );

@@ -1,13 +1,13 @@
 import {
   getChatSidebarTopic,
-  type ChatSidebarEventName,
-  type ChatSidebarNotificationPayload,
+  type ChatNotificationEventName,
+  type ChatNotificationPayload,
 } from "./chatNotifications";
 
 type PublishChatNotificationArgs = {
   userId: string;
-  event: ChatSidebarEventName;
-  payload: ChatSidebarNotificationPayload;
+  event: ChatNotificationEventName;
+  payload: ChatNotificationPayload;
 };
 
 let warnedAboutMissingNotifyConfig = false;
@@ -23,7 +23,7 @@ export async function publishChatNotification({
   if (!notifyServerUrl || !notifyServerSecret) {
     if (!warnedAboutMissingNotifyConfig) {
       console.warn(
-        "Notify server is not configured; chat sidebar updates will not be pushed.",
+        "Notify server is not configured; chat notifications will not be pushed.",
       );
       warnedAboutMissingNotifyConfig = true;
     }
@@ -55,7 +55,7 @@ export async function publishChatNotification({
       );
     }
   } catch (error) {
-    console.error("Error publishing chat sidebar notification:", error);
+    console.error("Error publishing chat notification:", error);
   } finally {
     clearTimeout(timeoutId);
   }
