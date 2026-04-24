@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
     });
     const chatOwner = await db
       .select({
+        chatSpaceId: chat_space.id,
         userId: chat_space.userId,
       })
       .from(chat)
@@ -176,7 +177,12 @@ export async function POST(req: NextRequest) {
         userId: chatOwner[0].userId,
         event: CHAT_VIDEO_STATUS_UPDATED_EVENT,
         payload: {
-          chatId,
+          chatSpaceId: chatOwner[0].chatSpaceId,
+          videos: videoUrls.map((videoUrl) => ({
+            id: videoUrl.id,
+            url: videoUrl.url,
+            status: videoUrl.status,
+          })),
         },
       });
     }

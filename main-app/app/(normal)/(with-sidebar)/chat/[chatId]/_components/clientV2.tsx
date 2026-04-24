@@ -356,14 +356,62 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         return;
       }
 
-      if (notification.payload.chatId !== chatId) {
+      if (notification.payload.chatSpaceId !== chatId) {
         return;
       }
 
-      void getChatHistory();
+      const updatedVideosById = new Map(
+        notification.payload.videos.map((video) => [video.id, video]),
+      );
+
+      setMessages((prev) => {
+        let hasChanges = false;
+
+        const nextMessages = prev.map((message) => {
+          if (!message.chat_videos?.length) {
+            return message;
+          }
+
+          let messageChanged = false;
+
+          const nextVideos = message.chat_videos.map((video) => {
+            const updatedVideo = updatedVideosById.get(video.id);
+
+            if (!updatedVideo) {
+              return video;
+            }
+
+            if (
+              updatedVideo.status === video.status &&
+              updatedVideo.url === video.url
+            ) {
+              return video;
+            }
+
+            messageChanged = true;
+            hasChanges = true;
+
+            return {
+              ...video,
+              status: updatedVideo.status,
+              url: updatedVideo.url,
+            };
+          });
+
+          return messageChanged
+            ? {
+                ...message,
+                chat_videos: nextVideos,
+              }
+            : message;
+        });
+
+        return hasChanges ? nextMessages : prev;
+      });
+
       void refetchCredits();
     });
-  }, [chatId, getChatHistory, refetchCredits, subscribeToNotifications]);
+  }, [chatId, refetchCredits, subscribeToNotifications]);
 
   if (spaceLoading) {
     return (

@@ -8,8 +8,15 @@ export type ChatSidebarEventName =
   | typeof CHAT_SPACE_CREATED_EVENT
   | typeof CHAT_SPACE_UPDATED_EVENT;
 
+export type ChatVideoStatusUpdatedVideo = {
+  id: string;
+  url: string;
+  status: "completed" | "failed";
+};
+
 export type ChatVideoStatusUpdatedPayload = {
-  chatId: string;
+  chatSpaceId: string;
+  videos: ChatVideoStatusUpdatedVideo[];
 };
 
 export type ChatNotificationEventName =
