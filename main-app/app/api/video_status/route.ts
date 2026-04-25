@@ -1,7 +1,15 @@
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { chat_video, user, creditTransaction } from "@/lib/schema";
+import {
+  chat,
+  chat_video,
+  chat_space,
+  user,
+  creditTransaction,
+} from "@/lib/schema";
+import { CHAT_VIDEO_STATUS_UPDATED_EVENT } from "@/lib/chat-utils/chatNotifications";
+import { publishChatNotification } from "@/lib/chat-utils/publishChatNotification";
 
 export async function POST(req: NextRequest) {
   // Verify authentication
@@ -32,7 +40,6 @@ export async function POST(req: NextRequest) {
 
   try {
     await db.transaction(async (tx) => {
-      let totalCreditsDeducted = 0;
       let anyFailed = false;
 
       // Update all video statuses first
@@ -143,9 +150,8 @@ export async function POST(req: NextRequest) {
                 .set({ transactionalStatus: "completed" })
                 .where(eq(creditTransaction.id, transaction.id));
 
-              totalCreditsDeducted = Math.abs(transaction.amount);
               console.log(
-                `Completed transaction ${transaction.id} - ${totalCreditsDeducted} credits charged`,
+                `Completed transaction ${transaction.id} - ${Math.abs(transaction.amount)} credits charged`,
               );
             }
           }
@@ -156,6 +162,30 @@ export async function POST(req: NextRequest) {
         `Updated ${videoUrls.length} videos for chatId: ${chatId}. Status: All done`,
       );
     });
+    const chatOwner = await db
+      .select({
+        chatSpaceId: chat_space.id,
+        userId: chat_space.userId,
+      })
+      .from(chat)
+      .innerJoin(chat_space, eq(chat.chatSpaceId, chat_space.id))
+      .where(eq(chat.id, chatId))
+      .limit(1);
+
+    if (chatOwner[0]?.userId) {
+      await publishChatNotification({
+        userId: chatOwner[0].userId,
+        event: CHAT_VIDEO_STATUS_UPDATED_EVENT,
+        payload: {
+          chatSpaceId: chatOwner[0].chatSpaceId,
+          videos: videoUrls.map((videoUrl) => ({
+            id: videoUrl.id,
+            url: videoUrl.url,
+            status: videoUrl.status,
+          })),
+        },
+      });
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

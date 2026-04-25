@@ -13,6 +13,8 @@ import { getPythonBlockCodeFromMessage } from "./getPythonBlockCode";
 import { setTitleToChatSpace } from "./spaceActions";
 import { completeTextForChat } from "./completeTextForChat";
 import { getTitleFromMessage } from "./getTitleFromMessage";
+import { CHAT_SPACE_UPDATED_EVENT } from "./chatNotifications";
+import { publishChatNotification } from "./publishChatNotification";
 
 export const VIDEO_QUALITIES = ["high", "medium", "low"] as const;
 export const TOTAL_VIDEO_COST = VIDEO_QUALITIES.length;
@@ -147,6 +149,12 @@ export async function createChatGenerationResponse({
     if (isFirstConversation) {
       const extractedTitle = getTitleFromMessage(fullResponse);
       await setTitleToChatSpace(chatId, extractedTitle);
+
+      await publishChatNotification({
+        userId: sessionUserId,
+        event: CHAT_SPACE_UPDATED_EVENT,
+        payload: { chatSpaceId: chatId, title: extractedTitle },
+      });
     }
 
     const payload: ChatGenerationApiSuccess = {
