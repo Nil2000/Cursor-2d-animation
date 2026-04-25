@@ -98,7 +98,9 @@ export async function processMessage(message: string) {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${errorText}`, {
+          cause: error,
+        });
       }
       const responseData = await response.json();
       console.log(
