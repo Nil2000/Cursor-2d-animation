@@ -1,0 +1,32 @@
+# WebSocket + HTTP notify service (Bun).
+# Build from repository root:
+#   docker build -f docker/Dockerfile.notify-server -t notify-server .
+# Run (NOTIFY_SERVER_SECRET is required):
+#   docker run --rm -e NOTIFY_SERVER_SECRET=... -p 4001:4001 notify-server
+
+FROM oven/bun:1-alpine AS base
+
+# Install dependencies (cached until package.json / lockfile change)
+FROM base AS install
+WORKDIR /app
+COPY notify-server/package.json notify-server/bun.lock ./
+RUN bun install --frozen-lockfile --production
+
+FROM base AS runner
+WORKDIR /app
+COPY --from=install /app/node_modules ./node_modules
+
+COPY notify-server/src/ ./src/
+COPY notify-server/tsconfig.json ./
+COPY notify-server/package.json ./
+
+ENV NODE_ENV=production
+ENV PORT=4001
+ENV HOST=0.0.0.0
+
+EXPOSE 4001
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD /bin/sh -c 'wget -qO- "http://127.0.0.1:$${PORT:-4001}/health" || exit 1'
+
+CMD ["bun", "run", "start"]
