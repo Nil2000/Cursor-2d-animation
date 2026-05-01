@@ -4,7 +4,11 @@
 # Run (NOTIFY_SERVER_SECRET is required):
 #   docker run --rm -e NOTIFY_SERVER_SECRET=... -p 4001:4001 notify-server
 
+
 FROM oven/bun:1-alpine AS base
+LABEL org.opencontainers.image.source=https://github.com/nil2000/cursor-for-2d-animations
+LABEL org.opencontainers.image.description="Notify server for cursor-for-2d-animations"
+LABEL org.opencontainers.image.licenses=MIT
 
 # Install dependencies (cached until package.json / lockfile change)
 FROM base AS install
