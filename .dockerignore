@@ -1,0 +1,11 @@
+# Keep Docker build contexts small and avoid sending local secrets.
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/.env
+**/.env.*
+*.log
+**/*.log
+.git
+.gitignore

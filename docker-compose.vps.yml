@@ -1,0 +1,41 @@
+# VPS stack: Redis + processor + notify-server. Copy `.env` next to this file before `up`.
+# Processor uses Compose DNS `redis` (see REDIS_URL below). Published 6379 is for producers
+# off this host (e.g. main-app); restrict in firewall / add Redis ACLs or requirepass as needed.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: cursor_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  processor:
+    image: ghcr.io/nil2000/cursor-for-2d-animations/processor-prod:latest
+    container_name: cursor_processor
+    restart: unless-stopped
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    environment:
+      # Overrides `.env`; always use in-stack Redis hostname.
+      REDIS_URL: redis://redis:6379
+    volumes:
+      # Required: processor runs `docker run manimcommunity/manim` via the host engine.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  notify-server:
+    image: ghcr.io/nil2000/cursor-for-2d-animations/notify-server-prod:latest
+    container_name: cursor_notify_server
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "4001:4001"
+
+volumes:
+  redis_data:
