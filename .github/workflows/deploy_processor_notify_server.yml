@@ -12,7 +12,6 @@ on:
 
 env:
   REGISTRY_PREFIX: ghcr.io/nil2000/cursor-for-2d-animations
-  VPS_DEPLOY_PATH: /root/cursor_workers
 
 jobs:
   build:
@@ -52,18 +51,18 @@ jobs:
       - name: Ensure deploy directory on VPS
         run: |
           ssh -o StrictHostKeyChecking=no "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            "mkdir -p '${{ env.VPS_DEPLOY_PATH }}'"
+            "mkdir -p '${{ secrets.VPS_DEPLOY_PATH }}'"
 
       - name: Copy compose file to VPS
         run: |
           scp -o StrictHostKeyChecking=no docker-compose.vps.yml \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ env.VPS_DEPLOY_PATH }}/"
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/"
 
       - name: Write .env on VPS from secrets
         run: |
           ssh -o StrictHostKeyChecking=no "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'REMOTE'
           set -e
-          cd '${{ env.VPS_DEPLOY_PATH }}'
+          cd '${{ secrets.VPS_DEPLOY_PATH }}'
           cat > .env << EOL
           REDIS_QUEUE_NAME="${{ secrets.REDIS_QUEUE_NAME }}"
           INTERNAL_API_KEY="${{ secrets.INTERNAL_API_KEY }}"
@@ -80,7 +79,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'REMOTE_END'
           set -e
-          cd '${{ env.VPS_DEPLOY_PATH }}'
+          cd '${{ secrets.VPS_DEPLOY_PATH }}'
           echo "${{ secrets.GH_TOKEN }}" | docker login ghcr.io -u nil2000 --password-stdin
           docker compose -f docker-compose.vps.yml down
           docker compose -f docker-compose.vps.yml pull
