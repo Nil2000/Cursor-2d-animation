@@ -64,6 +64,7 @@ jobs:
           set -e
           cd '${{ secrets.VPS_DEPLOY_PATH }}'
           cat > .env << EOL
+          REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}"
           REDIS_QUEUE_NAME="${{ secrets.REDIS_QUEUE_NAME }}"
           INTERNAL_API_KEY="${{ secrets.INTERNAL_API_KEY }}"
           API_URL="${{ secrets.API_URL }}"
