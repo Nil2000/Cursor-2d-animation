@@ -8,6 +8,7 @@ import {
   buildChatNotificationWebSocketUrl,
   type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
+import { toast } from "sonner";
 
 // Define the shape of the context
 type ChatPageContextProps = {
@@ -91,6 +92,15 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
         }
 
         console.error("Error fetching chat history:", error);
+        toast.error("Could not load chat history", {
+          id: "chat-history-error",
+          description: (
+            <span>
+              Your sidebar history is temporarily unavailable.{" "}
+              <span className="font-medium">Please refresh if it persists.</span>
+            </span>
+          ),
+        });
       }
     },
     [],
@@ -115,6 +125,15 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       setIsPremium(data.isPremium);
     } catch (err) {
       console.error("Error fetching credits:", err);
+      toast.error("Could not load credits", {
+        id: "credits-error",
+        description: (
+          <span>
+            Your current credit balance is unavailable.{" "}
+            <span className="font-medium">Please refresh if it persists.</span>
+          </span>
+        ),
+      });
     } finally {
       setCreditsLoading(false);
     }
