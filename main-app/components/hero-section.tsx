@@ -139,9 +139,9 @@ export default function HeroSection({
               ease: [0.2, 0.8, 0.2, 1],
             }}
           >
-            Turn Customer Love <span className="text-primary">💖</span>
-            <br /> into Trust-Driving Testimonials{" "}
-            <span className="text-primary">⭐</span>
+            Bring Your Ideas to Life <span className="text-primary">✨</span>
+            <br /> with Manim AI Animations{" "}
+            <span className="text-primary">🎬</span>
           </motion.h1>
 
           {/* Secondary text */}
@@ -155,10 +155,9 @@ export default function HeroSection({
               ease: [0.2, 0.8, 0.2, 1],
             }}
           >
-            Effortlessly collect, manage, and showcase testimonials with
-            beautiful,
+            Describe what you want to animate and Manim turns it into beautiful,
             <br />
-            customizable pages that boost your product&apos;s credibility.
+            production-ready 2D animations powered by AI.
           </motion.p>
 
           <motion.div

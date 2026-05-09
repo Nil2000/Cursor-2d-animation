@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 type Props = {
   code: string;
@@ -24,6 +25,14 @@ export default function CodeDialog({ code, isOpen, onClose }: Props) {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy code", err);
+      toast.error("Copy failed", {
+        description: (
+          <span>
+            The generated code could not be copied.{" "}
+            <span className="font-medium">Please try again.</span>
+          </span>
+        ),
+      });
     }
   };
 
