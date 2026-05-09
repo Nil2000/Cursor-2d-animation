@@ -23,6 +23,7 @@ import FooterUser from "./sidebar-footer/footer-user";
 import FooterCredits from "./sidebar-footer/footer-credits";
 import { UserInfoType } from "@/lib/types";
 import { useChatHook } from "@/components/providers/chat-provider";
+import Logo from "@/components/logo";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
@@ -34,8 +35,17 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
 
   return (
     <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
-      <SidebarHeader className="flex items-center justify-center h-16 font-mono text-2xl font-bold">
-        AnimX
+      <SidebarHeader className="flex items-center justify-center h-16">
+        <Link
+          href="/chat"
+          aria-label="Manim home"
+          className="flex items-center gap-2"
+        >
+          <Logo
+            showWordmark
+            wordmarkClassName="font-mono text-2xl font-bold"
+          />
+        </Link>
       </SidebarHeader>
       <SidebarContent className="px-2">
         <SidebarMenu>
