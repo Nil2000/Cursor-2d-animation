@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/logo";
+import { toast } from "sonner";
 
 export default function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +27,14 @@ export default function SignInForm() {
       });
     } catch (error) {
       console.error("Sign in error:", error);
+      toast.error("Sign in failed", {
+        description: (
+          <span>
+            We could not start Google sign in.{" "}
+            <span className="font-medium">Please try again.</span>
+          </span>
+        ),
+      });
       setIsLoading(false);
     }
   };

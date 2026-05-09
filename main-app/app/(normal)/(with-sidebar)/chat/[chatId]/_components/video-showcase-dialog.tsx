@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2, AlertCircle } from "lucide-react";
 import { ClientMessageVideoType } from "@/lib/types";
 import VideoSelect, { getQualityLabel } from "./video-select";
+import { toast } from "sonner";
 
 export default function VideoDialogShowCase({
   videos,
@@ -41,6 +42,14 @@ export default function VideoDialogShowCase({
   const handleDownload = async () => {
     if (!selectedVideo?.url) {
       setDownloadError("No video URL available for download");
+      toast.error("Download unavailable", {
+        description: (
+          <span>
+            This video quality does not have a downloadable file yet.{" "}
+            <span className="font-medium">Please choose another quality.</span>
+          </span>
+        ),
+      });
       return;
     }
 
@@ -79,6 +88,14 @@ export default function VideoDialogShowCase({
     } catch (error) {
       console.error("Error downloading video:", error);
       setDownloadError("Failed to download the video. Please try again.");
+      toast.error("Download failed", {
+        description: (
+          <span>
+            We could not download the generated video.{" "}
+            <span className="font-medium">Please try again.</span>
+          </span>
+        ),
+      });
     } finally {
       setIsDownloading(false);
     }

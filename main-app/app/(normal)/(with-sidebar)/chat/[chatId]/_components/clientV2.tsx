@@ -24,12 +24,23 @@ import {
   CHAT_VIDEO_STATUS_UPDATED_EVENT,
   type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
+import { toast } from "sonner";
 
 type Props = {
   chatId: string;
   spaceExists: boolean;
   userInfo: UserInfoType;
 };
+
+function showErrorToast(title: string, description: string) {
+  toast.error(title, {
+    description: (
+      <span>
+        {description} <span className="font-medium">Please try again.</span>
+      </span>
+    ),
+  });
+}
 
 export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
@@ -141,6 +152,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
               typeof (raw as { error: unknown }).error === "string"
                 ? (raw as { error: string }).error
                 : "Request failed";
+            showErrorToast("Could not generate animation", errMsg);
             setMessages((prev) => [
               ...prev,
               {
@@ -183,6 +195,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         if (resyncOnFailure) {
           await resyncOnFailure();
         } else {
+          showErrorToast(
+            "Could not process response",
+            "The server returned an unexpected response.",
+          );
           setMessages((prev) => [
             ...prev,
             {
@@ -208,6 +224,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         return;
       }
       if (usersCredits === 0) {
+        showErrorToast(
+          "No credits available",
+          "Purchase more credits before generating another animation.",
+        );
         return;
       }
       const userInput = {
@@ -239,6 +259,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           console.error("Error sending message:", error);
+          showErrorToast(
+            "Message failed",
+            "Your message could not be sent.",
+          );
         }
         setLoading(false);
         abortController.current = null;
@@ -250,6 +274,10 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const handleRetry = React.useCallback(async () => {
     // Check credits before retrying
     if (usersCredits === 0) {
+      showErrorToast(
+        "No credits available",
+        "Purchase more credits before retrying this animation.",
+      );
       return;
     }
 
@@ -277,6 +305,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         console.error("Error retrying message:", error);
+        showErrorToast("Retry failed", "The last prompt could not be retried.");
         await getChatHistory();
       }
       setLoading(false);
