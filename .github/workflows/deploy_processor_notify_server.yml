@@ -70,8 +70,8 @@ jobs:
           API_URL="${{ secrets.API_URL }}"
           S3_PUBLIC_CUSTOM_DOMAIN="${{ secrets.S3_PUBLIC_CUSTOM_DOMAIN }}"
           NOTIFY_SERVER_SECRET="${{ secrets.NOTIFY_SERVER_SECRET }}"
-          PORT="4001"
-          HOST="0.0.0.0"
+          PORT="${{ secrets.NOTIFY_SERVER_PORT }}"
+          HOST="${{ secrets.NOTIFY_SERVER_HOST }}"
           EOL
           chmod 600 .env
           REMOTE
