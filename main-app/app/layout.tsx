@@ -3,6 +3,7 @@ import { Lora, Plus_Jakarta_Sans, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/next";
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster richColors />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
