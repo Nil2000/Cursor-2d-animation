@@ -8,8 +8,8 @@ type WebSocketData = {
   topic: string;
 };
 
-const port = Number(process.env.PORT ?? 4001);
-const hostname = process.env.HOST ?? "0.0.0.0";
+const port = Number(process.env.NOTIFY_SERVER_PORT ?? 4001);
+const hostname = process.env.NOTIFY_SERVER_HOST ?? "0.0.0.0";
 const notifyServerSecret = process.env.NOTIFY_SERVER_SECRET;
 
 if (!notifyServerSecret) {
