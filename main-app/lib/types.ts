@@ -41,6 +41,7 @@ export type Messages = Message[];
 export enum Role {
   Assistant = "assistant",
   User = "user",
+  System = "system",
 }
 
 export type CreditsType = {

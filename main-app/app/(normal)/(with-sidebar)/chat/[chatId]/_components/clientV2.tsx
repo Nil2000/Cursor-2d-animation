@@ -57,8 +57,12 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
   const router = useRouter();
-  const { usersCredits, creditsLoading, refetchCredits, subscribeToNotifications } =
-    useChatHook();
+  const {
+    usersCredits,
+    creditsLoading,
+    refetchCredits,
+    subscribeToNotifications,
+  } = useChatHook();
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -259,10 +263,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           console.error("Error sending message:", error);
-          showErrorToast(
-            "Message failed",
-            "Your message could not be sent.",
-          );
+          showErrorToast("Message failed", "Your message could not be sent.");
         }
         setLoading(false);
         abortController.current = null;
@@ -315,7 +316,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
   const init = React.useCallback(async () => {
     setSpaceLoading(false);
-    // console.log("init", chatId, spaceExists, userInfo);
+    console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
       // console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
@@ -330,7 +331,13 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       // get Chat history
       getChatHistory();
     }
-  }, [getChatHistory, getLastMessageFromLocalStorage, handleSendMessage, router, spaceExists]);
+  }, [
+    getChatHistory,
+    getLastMessageFromLocalStorage,
+    handleSendMessage,
+    router,
+    spaceExists,
+  ]);
 
   const scrollToBottom = () => {
     if (messageContainerRef.current) {
@@ -366,7 +373,8 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
         const updatedVideo = videosById.get(video.id);
         if (
           updatedVideo &&
-          (updatedVideo.status !== video.status || updatedVideo.url !== video.url)
+          (updatedVideo.status !== video.status ||
+            updatedVideo.url !== video.url)
         ) {
           hasChanges = true;
           return updatedVideo;
