@@ -42,7 +42,7 @@ function showErrorToast(title: string, description: string) {
   });
 }
 
-export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
+export default function ChatPage({ chatId, spaceExists, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState<boolean>(
@@ -259,7 +259,15 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
           signal: abortController.current?.signal,
         });
 
-        await handleChatApiResponse(response);
+        console.log(
+          "REACHED HERE",
+          input,
+          response,
+          response.status,
+          abortController.current?.signal,
+        );
+
+        // await handleChatApiResponse(response);
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           console.error("Error sending message:", error);
@@ -318,14 +326,15 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     setSpaceLoading(false);
     console.log("init", chatId, spaceExists, userInfo);
     if (!spaceExists) {
-      // console.log("no chat space");
+      console.log("no chat space");
       const message = getLastMessageFromLocalStorage();
 
       if (!message) {
+        console.log("NO MESSAGE");
         router.push("/chat");
-        // console.log("no message");
         return;
       }
+
       handleSendMessage(message);
     } else {
       // get Chat history
