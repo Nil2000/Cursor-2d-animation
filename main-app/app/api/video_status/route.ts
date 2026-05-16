@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
           .update(chat_video)
           .set({
             status: videoUrl.status,
-            url: videoUrl.url,
+            ...(videoUrl.url ? { url: videoUrl.url } : {}),
             updatedAt: new Date(),
           })
           .where(eq(chat_video.id, videoUrl.id));

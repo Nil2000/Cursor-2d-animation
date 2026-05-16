@@ -196,7 +196,10 @@ export async function runCodeInDocker(
         console.log("All quality versions uploaded successfully");
 
         // Clean up temporary files after successful upload
+        console.log("Temp directory ->", tempDir);
+        console.log("Cleaning up temporary files...");
         cleanupTempFiles(tempDir);
+        console.log("Temporary files cleaned up successfully");
 
         // Return only the high quality (1080p) URL
         return {

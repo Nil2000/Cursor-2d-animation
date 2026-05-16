@@ -6,4 +6,4 @@ export const protectedRoutePatterns = [
   /^\/chat\/[^\/]+$/, // matches /chat/anything
   // add more patterns as needed
 ];
-export const publicRoutes = ["/video_status"];
+export const publicRoutes = ["/api/video_status"];
