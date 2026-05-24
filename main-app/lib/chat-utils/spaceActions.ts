@@ -1,36 +1,21 @@
-import { headers } from "next/headers";
-import { auth } from "../auth";
+import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { chat, chat_space } from "../schema";
-import { eq } from "drizzle-orm";
 
-export const createChatSpace = async (chatId: string) => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-  if (!session || !session.user) {
-    throw new Error("User not authenticated");
-  }
-
+export const createEmptyChatSpace = async (userId: string) => {
   try {
-    const existingChatSpace = await db
-      .select()
-      .from(chat_space)
-      .where(eq(chat_space.id, chatId));
-
-    if (existingChatSpace.length > 0) {
-      return existingChatSpace;
-    }
-
-    const chatSpace = await db
+    const [chatSpace] = await db
       .insert(chat_space)
       .values({
-        id: chatId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        userId: session.user.id,
+        userId,
       })
-      .returning();
+      .returning({ id: chat_space.id });
+
+    if (!chatSpace) {
+      throw new Error("Failed to create chat space");
+    }
 
     return chatSpace;
   } catch (error) {
