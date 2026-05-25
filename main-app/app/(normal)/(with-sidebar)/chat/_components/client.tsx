@@ -9,6 +9,7 @@ import { Loader, Send } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useChatHook } from "@/components/providers/chat-provider";
 import { toast } from "sonner";
+import { useFetch } from "@/hooks/use-fetch";
 
 export default function Client() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function Client() {
   const [isCreating, setIsCreating] = React.useState(false);
   const { data: session } = authClient.useSession();
   const { setPendingBootstrap } = useChatHook();
+  const { fetchData } = useFetch<{ chatId: string }>();
 
   const handleSendMessage = async () => {
     if (!inputText || inputText.trim().length === 0 || isCreating) {
@@ -30,7 +32,7 @@ export default function Client() {
     setIsCreating(true);
 
     try {
-      const response = await fetch("/api/chat/create", {
+      const response = await fetchData("/api/chat/create", {
         method: "POST",
       });
 

@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
@@ -25,6 +24,7 @@ import {
   type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
 import { toast } from "sonner";
+import { useFetch } from "@/hooks/use-fetch";
 
 type Props = {
   chatId: string;
@@ -62,6 +62,7 @@ export default function ChatPage({ chatId, userInfo }: Props) {
     subscribeToNotifications,
     consumePendingBootstrap,
   } = useChatHook();
+  const { fetchData } = useFetch<{ messages: ClientMessageType[] }>();
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -104,15 +105,16 @@ export default function ChatPage({ chatId, userInfo }: Props) {
   }, [messages, loading, usersCredits]);
 
   const getChatHistory = React.useCallback(async () => {
-    const res = await axios.get(`/api/chat/${chatId}`);
+    const response = await fetchData(`/api/chat/${chatId}`);
 
-    if (res.status !== 200) {
-      // console.log("error", res);
+    if (!response.ok) {
       router.push("/");
       return;
     }
-    setMessages(res.data.messages);
-  }, [chatId, router]);
+
+    const data = (await response.json()) as { messages: ClientMessageType[] };
+    setMessages(data.messages);
+  }, [chatId, fetchData, router]);
 
   const handleChatApiResponse = React.useCallback(
     async (
@@ -226,7 +228,7 @@ export default function ChatPage({ chatId, userInfo }: Props) {
       abortController.current = new AbortController();
 
       try {
-        const response = await fetch(`/api/chat/${chatId}`, {
+        const response = await fetchData(`/api/chat/${chatId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -245,7 +247,7 @@ export default function ChatPage({ chatId, userInfo }: Props) {
         abortController.current = null;
       }
     },
-    [chatId, handleChatApiResponse, usersCredits],
+    [chatId, fetchData, handleChatApiResponse, usersCredits],
   );
 
   const handleRetry = React.useCallback(async () => {
@@ -269,7 +271,7 @@ export default function ChatPage({ chatId, userInfo }: Props) {
       // Remove the last message from the UI immediately (it should be an assistant message)
       setMessages((prev) => prev.slice(0, -1));
 
-      const response = await fetch(`/api/chat/retry`, {
+      const response = await fetchData(`/api/chat/retry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -288,7 +290,7 @@ export default function ChatPage({ chatId, userInfo }: Props) {
       setLoading(false);
       abortController.current = null;
     }
-  }, [chatId, getChatHistory, handleChatApiResponse, usersCredits]);
+  }, [chatId, fetchData, getChatHistory, handleChatApiResponse, usersCredits]);
 
   const videosForDialog = React.useMemo(() => {
     if (!videoDialogOpen || selectedVideos.length === 0) {
