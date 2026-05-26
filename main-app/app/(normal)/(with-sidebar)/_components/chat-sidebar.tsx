@@ -1,109 +1,108 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { PenLine, Sparkles } from "lucide-react";
+import Logo from "@/components/logo";
+import { useChatHook } from "@/components/providers/chat-provider";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar";
-import { ChevronDown, PenBox } from "lucide-react";
-import Link from "next/link";
-import FooterUser from "./sidebar-footer/footer-user";
-import FooterCredits from "./sidebar-footer/footer-credits";
 import { UserInfoType } from "@/lib/types";
-import { useChatHook } from "@/components/providers/chat-provider";
-import Logo from "@/components/logo";
+import { cn } from "@/lib/utils";
+import FooterCredits from "./sidebar-footer/footer-credits";
+import FooterUser from "./sidebar-footer/footer-user";
+import { SidebarHistory } from "./sidebar-history";
 
 type ChatSidebarProps = {
   userInfo: UserInfoType;
 };
 
 export function ChatSidebar({ userInfo }: ChatSidebarProps) {
-  const { limit, setLimit, history, usersCredits, isUserPremium } =
-    useChatHook();
+  const pathname = usePathname();
+  const {
+    limit,
+    setLimit,
+    history,
+    usersCredits,
+    isUserPremium,
+    creditsLoading,
+  } = useChatHook();
+
+  const isNewChatActive = pathname === "/chat";
 
   return (
-    <Sidebar className="h-calc(100vh - 4rem)" variant="inset">
-      <SidebarHeader className="flex items-center justify-center h-16">
+    <Sidebar
+      variant="inset"
+      collapsible="offcanvas"
+      className="border-r border-sidebar-border/60"
+    >
+      <SidebarHeader className="flex shrink-0 flex-col items-center gap-2 border-b border-sidebar-border/60 px-3 py-4">
         <Link
           href="/chat"
           aria-label="Manim home"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 rounded-xl px-1 transition-opacity hover:opacity-90"
         >
           <Logo
             showWordmark
-            wordmarkClassName="font-mono text-2xl font-bold"
+            className="border border-sidebar-border/80"
+            wordmarkClassName="text-lg font-bold"
           />
         </Link>
+        <p className="flex items-center gap-1.5 px-1 text-[11px] font-medium text-muted-foreground mx-auto">
+          <Sparkles className="size-3 text-primary" />
+          Animation studio
+        </p>
       </SidebarHeader>
-      <SidebarContent className="px-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="mx-2">
-            <Link href={"/chat"}>
-              <SidebarMenuButton className="cursor-pointer h-10">
-                <PenBox className="mr-2 h-4 w-4" />
-                New Chat
-              </SidebarMenuButton>
-            </Link>
+
+      <SidebarContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-2 py-3">
+        <SidebarMenu className="shrink-0">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isNewChatActive}
+              tooltip="New Chat"
+              className={cn(
+                "h-10 rounded-xl font-medium shadow-sm transition-all",
+                isNewChatActive
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                  : "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
+              )}
+            >
+              <Link href="/chat">
+                <PenLine className="size-4" />
+                <span>New Chat</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger>
-                Chat History
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                {history.length > 0 && (
-                  <ul className="mb-2">
-                    {history.map((item) => (
-                      <li key={item.id}>
-                        <Link href={`/chat/${item.id}`}>
-                          <SidebarMenuButton className="cursor-pointer truncate h-10">
-                            {item.title
-                              ? item.title.slice(0, 25) + "..."
-                              : "New Chat"}
-                          </SidebarMenuButton>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Button
-                  variant={"link"}
-                  className="text-muted-foreground hover:text-primary w-full cursor-pointer"
-                  onClick={() => {
-                    setLimit(limit + 5);
-                  }}
-                >
-                  Show more
-                </Button>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+
+        <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
+          <SidebarHistory
+            history={history}
+            limit={limit}
+            onShowMore={() => setLimit(limit + 5)}
+          />
+        </div>
       </SidebarContent>
-      <SidebarFooter>
+
+      <SidebarFooter className="shrink-0 gap-2 border-t border-sidebar-border/60 bg-sidebar-accent/20 p-2">
         <FooterCredits
           usersCredits={usersCredits}
           isUserPremium={isUserPremium}
+          creditsLoading={creditsLoading}
         />
         <FooterUser userInfo={userInfo} />
       </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   );
 }
