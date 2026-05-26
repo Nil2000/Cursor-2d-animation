@@ -1,6 +1,5 @@
-import React from "react";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "./logo-mark";
 
 export const APP_NAME = "Manim";
 
@@ -19,28 +18,25 @@ export default function Logo({
   showWordmark = false,
   wordmarkClassName,
 }: LogoProps) {
-  const image = (
-    <Image
-      src="/logo.svg"
-      alt={`${APP_NAME} logo`}
+  const mark = (
+    <LogoMark
       width={width}
       height={height}
-      priority
-      className={cn("bg-white rounded-sm p-1", className)}
+      className={cn("rounded-sm p-1", className)}
     />
   );
 
   if (!showWordmark) {
-    return image;
+    return mark;
   }
 
   return (
-    <span className="flex items-center gap-2">
-      {image}
+    <span className="flex items-center gap-2 text-foreground">
+      {mark}
       <span
         className={cn(
           "font-mono text-xl font-bold tracking-tight",
-          wordmarkClassName
+          wordmarkClassName,
         )}
       >
         {APP_NAME}
