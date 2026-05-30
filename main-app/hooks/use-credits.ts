@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useFetch } from "@/hooks/use-fetch";
 import { CreditsType } from "@/lib/types";
 
 export const useCredits = () => {
@@ -6,18 +9,19 @@ export const useCredits = () => {
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { fetchData } = useFetch<CreditsType>();
 
-  const fetchCredits = async () => {
+  const fetchCredits = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/credits");
+      const response = await fetchData("/api/credits");
 
       if (!response.ok) {
         throw new Error("Failed to fetch credits");
       }
 
-      const data: CreditsType = await response.json();
+      const data = (await response.json()) as CreditsType;
       setCredits(data.credits);
       setIsPremium(data.isPremium);
     } catch (err) {
@@ -26,11 +30,11 @@ export const useCredits = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchData]);
 
   useEffect(() => {
-    fetchCredits();
-  }, []);
+    void fetchCredits();
+  }, [fetchCredits]);
 
   return {
     usersCredits: credits,

@@ -22,8 +22,9 @@ FROM base AS runner
 WORKDIR /app
 COPY --from=install /app/node_modules ./node_modules
 
-# Copy source code
+# Copy source code and branding assets
 COPY processor/src/ ./src/
+COPY processor/assets/ ./assets/
 COPY processor/tsconfig.json ./
 COPY processor/package.json ./
 
