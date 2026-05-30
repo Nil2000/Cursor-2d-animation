@@ -2,9 +2,9 @@ import {
   MODEL,
   OPENROUTER_CHAT_COMPLETION_URL,
   OPENROUTER_API_KEY,
-  MANIM_SYSTEM_PRESET,
+  MANIM_SYSTEM_PROMPT,
 } from "../constants";
-import { Messages } from "../types";
+import { Messages, Message, Role } from "../types";
 
 type OpenRouterChatResponse = {
   choices?: Array<{
@@ -13,6 +13,11 @@ type OpenRouterChatResponse = {
 };
 
 export async function completeTextForChat(messages: Messages): Promise<string> {
+  const payloadMessages: Message[] = [
+    { role: Role.System, content: MANIM_SYSTEM_PROMPT },
+    ...messages,
+  ];
+
   const response = await fetch(OPENROUTER_CHAT_COMPLETION_URL, {
     method: "POST",
     headers: {
@@ -21,8 +26,7 @@ export async function completeTextForChat(messages: Messages): Promise<string> {
     },
     body: JSON.stringify({
       model: MODEL,
-      messages,
-      preset: MANIM_SYSTEM_PRESET,
+      messages: payloadMessages,
       stream: false,
     }),
   });

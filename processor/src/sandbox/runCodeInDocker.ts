@@ -9,6 +9,9 @@ const execAsync = promisify(exec);
 const DOCKER_TIMEOUT_MS = 15 * 60 * 1000;
 const DOCKER_MEMORY_LIMIT = "2g";
 const DOCKER_CPU_LIMIT = "2";
+const LOGO_PATH = path.join(__dirname, "../../assets/logo.png");
+const LOGO_MARGIN_PX = 24;
+const LOGO_WIDTH_PX = 120;
 
 const getJobTempDir = () => {
   const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -45,6 +48,40 @@ const cleanupTempFiles = (dirPath: string) => {
   } catch (cleanupError) {
     console.error("Error during cleanup:", cleanupError);
   }
+};
+
+const applyLogoOverlay = (
+  inputPath: string,
+  outputPath: string,
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(LOGO_PATH)) {
+      reject(new Error(`Logo file not found: ${LOGO_PATH}`));
+      return;
+    }
+
+    console.log("Applying logo overlay...");
+    ffmpeg(inputPath)
+      .input(LOGO_PATH)
+      .complexFilter(
+        [
+          `[1:v]scale=${LOGO_WIDTH_PX}:-1[logo]`,
+          `[0:v][logo]overlay=W-w-${LOGO_MARGIN_PX}:H-h-${LOGO_MARGIN_PX}[out]`,
+        ],
+        "out",
+      )
+      .videoCodec("libx264")
+      .outputOptions(["-crf 23", "-preset medium", "-pix_fmt yuv420p"])
+      .on("end", () => {
+        console.log("Logo overlay applied successfully");
+        resolve();
+      })
+      .on("error", (err: Error) => {
+        console.error("Error applying logo overlay:", err.message);
+        reject(err);
+      })
+      .save(outputPath);
+  });
 };
 
 // Helper function to generate lower quality videos using fluent-ffmpeg
@@ -135,6 +172,11 @@ export async function runCodeInDocker(
         const stats = fs.statSync(fullPath);
         console.log("File size:", stats.size, "bytes");
 
+        const brandedPath = path.join(
+          outputFileDir,
+          file.replace(".mp4", "_branded.mp4"),
+        );
+
         // Generate lower quality versions
         const video480pPath = path.join(
           outputFileDir,
@@ -146,6 +188,10 @@ export async function runCodeInDocker(
         );
 
         try {
+          await applyLogoOverlay(fullPath, brandedPath);
+          fs.unlinkSync(fullPath);
+          fs.renameSync(brandedPath, fullPath);
+
           await generateLowerQualityVideo(fullPath, video480pPath, 480);
           await generateLowerQualityVideo(fullPath, video144pPath, 144);
         } catch (ffmpegError: unknown) {
@@ -196,7 +242,10 @@ export async function runCodeInDocker(
         console.log("All quality versions uploaded successfully");
 
         // Clean up temporary files after successful upload
+        console.log("Temp directory ->", tempDir);
+        console.log("Cleaning up temporary files...");
         cleanupTempFiles(tempDir);
+        console.log("Temporary files cleaned up successfully");
 
         // Return only the high quality (1080p) URL
         return {

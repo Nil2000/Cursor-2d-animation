@@ -14,7 +14,7 @@ export type ClientMessageVideoType = {
   url: string;
 };
 
-/** JSON body of a successful POST /api/chat or POST /api/chat/retry response */
+/** JSON body of a successful POST /api/chat/[chatSpaceId] or POST /api/chat/retry response */
 export type ChatGenerationApiSuccess = {
   chatId: string;
   body: string;
@@ -41,6 +41,7 @@ export type Messages = Message[];
 export enum Role {
   Assistant = "assistant",
   User = "user",
+  System = "system",
 }
 
 export type CreditsType = {

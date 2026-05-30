@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import React from "react";
 import UserBubble from "./user-bubble";
@@ -25,10 +24,10 @@ import {
   type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
 import { toast } from "sonner";
+import { useFetch } from "@/hooks/use-fetch";
 
 type Props = {
   chatId: string;
-  spaceExists: boolean;
   userInfo: UserInfoType;
 };
 
@@ -42,12 +41,10 @@ function showErrorToast(title: string, description: string) {
   });
 }
 
-export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
+export default function ChatPage({ chatId, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
-  const [loading, setLoading] = React.useState<boolean>(
-    spaceExists ? false : true,
-  );
+  const [loading, setLoading] = React.useState<boolean>(false);
   const [inputText, setInputText] = React.useState<string>("");
   const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
   const [selectedVideos, setSelectedVideos] = React.useState<
@@ -56,9 +53,16 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
+  const bootstrappedChatIdRef = React.useRef<string | null>(null);
   const router = useRouter();
-  const { usersCredits, creditsLoading, refetchCredits, subscribeToNotifications } =
-    useChatHook();
+  const {
+    usersCredits,
+    creditsLoading,
+    refetchCredits,
+    subscribeToNotifications,
+    consumePendingBootstrap,
+  } = useChatHook();
+  const { fetchData } = useFetch<{ messages: ClientMessageType[] }>();
 
   const handleOpenVideoDialog = React.useCallback(
     (allVideos: ClientMessageVideoType[]) => {
@@ -100,38 +104,17 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
     return hasFailedVideos || false;
   }, [messages, loading, usersCredits]);
 
-  const getLastMessageFromLocalStorage = React.useCallback(() => {
-    const key = `user/${userInfo.id}`;
-    const localStorageData = localStorage.getItem(key);
-    if (!localStorageData) {
-      // console.log("no data");
-      return null;
-    }
-    const userData = JSON.parse(localStorageData);
-    if (!userData.lastSearchedFor) {
-      // console.log("no last searched for");
-      return null;
-    }
-
-    // Store the message text before deleting
-    const messageText = userData.lastSearchedFor.text;
-
-    // Delete the localStorage data completely
-    localStorage.removeItem(key);
-
-    return messageText;
-  }, [userInfo.id]);
-
   const getChatHistory = React.useCallback(async () => {
-    const res = await axios.get(`/api/chat/${chatId}`);
+    const response = await fetchData(`/api/chat/${chatId}`);
 
-    if (res.status !== 200) {
-      // console.log("error", res);
+    if (!response.ok) {
       router.push("/");
       return;
     }
-    setMessages(res.data.messages);
-  }, [chatId, router]);
+
+    const data = (await response.json()) as { messages: ClientMessageType[] };
+    setMessages(data.messages);
+  }, [chatId, fetchData, router]);
 
   const handleChatApiResponse = React.useCallback(
     async (
@@ -245,12 +228,11 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       abortController.current = new AbortController();
 
       try {
-        const response = await fetch(`/api/chat`, {
+        const response = await fetchData(`/api/chat/${chatId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: input,
-            chatId: chatId,
           }),
           signal: abortController.current?.signal,
         });
@@ -259,16 +241,13 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           console.error("Error sending message:", error);
-          showErrorToast(
-            "Message failed",
-            "Your message could not be sent.",
-          );
+          showErrorToast("Message failed", "Your message could not be sent.");
         }
         setLoading(false);
         abortController.current = null;
       }
     },
-    [chatId, handleChatApiResponse, usersCredits],
+    [chatId, fetchData, handleChatApiResponse, usersCredits],
   );
 
   const handleRetry = React.useCallback(async () => {
@@ -292,7 +271,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       // Remove the last message from the UI immediately (it should be an assistant message)
       setMessages((prev) => prev.slice(0, -1));
 
-      const response = await fetch(`/api/chat/retry`, {
+      const response = await fetchData(`/api/chat/retry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -311,45 +290,11 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       setLoading(false);
       abortController.current = null;
     }
-  }, [chatId, getChatHistory, handleChatApiResponse, usersCredits]);
+  }, [chatId, fetchData, getChatHistory, handleChatApiResponse, usersCredits]);
 
-  const init = React.useCallback(async () => {
-    setSpaceLoading(false);
-    // console.log("init", chatId, spaceExists, userInfo);
-    if (!spaceExists) {
-      // console.log("no chat space");
-      const message = getLastMessageFromLocalStorage();
-
-      if (!message) {
-        router.push("/chat");
-        // console.log("no message");
-        return;
-      }
-      handleSendMessage(message);
-    } else {
-      // get Chat history
-      getChatHistory();
-    }
-  }, [getChatHistory, getLastMessageFromLocalStorage, handleSendMessage, router, spaceExists]);
-
-  const scrollToBottom = () => {
-    if (messageContainerRef.current) {
-      messageContainerRef.current.scrollTop =
-        messageContainerRef.current.scrollHeight;
-    }
-  };
-
-  React.useEffect(() => {
-    void init();
-  }, [init]);
-
-  React.useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
-
-  React.useEffect(() => {
+  const videosForDialog = React.useMemo(() => {
     if (!videoDialogOpen || selectedVideos.length === 0) {
-      return;
+      return selectedVideos;
     }
 
     const videosById = new Map<string, ClientMessageVideoType>();
@@ -359,25 +304,34 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
       });
     });
 
-    setSelectedVideos((current) => {
-      let hasChanges = false;
+    return selectedVideos.map((video) => videosById.get(video.id) ?? video);
+  }, [messages, videoDialogOpen, selectedVideos]);
 
-      const nextVideos = current.map((video) => {
-        const updatedVideo = videosById.get(video.id);
-        if (
-          updatedVideo &&
-          (updatedVideo.status !== video.status || updatedVideo.url !== video.url)
-        ) {
-          hasChanges = true;
-          return updatedVideo;
-        }
+  React.useEffect(() => {
+    if (bootstrappedChatIdRef.current === chatId) {
+      return;
+    }
+    bootstrappedChatIdRef.current = chatId;
 
-        return video;
-      });
+    const pendingMessage = consumePendingBootstrap(chatId);
 
-      return hasChanges ? nextVideos : current;
+    if (pendingMessage) {
+      setSpaceLoading(false);
+      void handleSendMessage(pendingMessage);
+      return;
+    }
+
+    void getChatHistory().finally(() => {
+      setSpaceLoading(false);
     });
-  }, [messages, videoDialogOpen, selectedVideos.length]);
+  }, [chatId, consumePendingBootstrap, getChatHistory, handleSendMessage]);
+
+  React.useLayoutEffect(() => {
+    const container = messageContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages, loading]);
 
   React.useEffect(() => {
     return subscribeToNotifications((notification: ChatNotification) => {
@@ -535,7 +489,7 @@ export default function ChatPageV2({ chatId, spaceExists, userInfo }: Props) {
 
       {/* Video Dialog with all qualities */}
       <VideoDialogShowCase
-        videos={selectedVideos}
+        videos={videosForDialog}
         showDialog={videoDialogOpen}
         onDialogClose={() => setVideoDialogOpen(false)}
       />

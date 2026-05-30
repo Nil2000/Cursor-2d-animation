@@ -1,6 +1,8 @@
 "use client";
-import axios from "axios";
 import * as React from "react";
+
+import { useFetch } from "@/hooks/use-fetch";
+import { CreditsType } from "@/lib/types";
 
 import {
   CHAT_SPACE_CREATED_EVENT,
@@ -9,6 +11,11 @@ import {
   type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
 import { toast } from "sonner";
+
+type PendingBootstrap = {
+  chatId: string;
+  message: string;
+};
 
 // Define the shape of the context
 type ChatPageContextProps = {
@@ -28,6 +35,9 @@ type ChatPageContextProps = {
   isUserPremium: boolean;
   creditsLoading: boolean;
   refetchCredits: () => Promise<void>;
+  pendingBootstrap: PendingBootstrap | null;
+  setPendingBootstrap: (payload: PendingBootstrap) => void;
+  consumePendingBootstrap: (chatId: string) => string | null;
 };
 
 type ChatPageProviderProps = {
@@ -67,6 +77,28 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
   const [credits, setCredits] = React.useState<number>(0);
   const [isPremium, setIsPremium] = React.useState<boolean>(false);
   const [creditsLoading, setCreditsLoading] = React.useState<boolean>(true);
+  const [pendingBootstrap, setPendingBootstrapState] =
+    React.useState<PendingBootstrap | null>(null);
+  const { fetchData } = useFetch();
+
+  const setPendingBootstrap = React.useCallback((payload: PendingBootstrap) => {
+    setPendingBootstrapState(payload);
+  }, []);
+
+  const consumePendingBootstrap = React.useCallback((chatId: string) => {
+    let message: string | null = null;
+
+    setPendingBootstrapState((current) => {
+      if (!current || current.chatId !== chatId) {
+        return current;
+      }
+
+      message = current.message;
+      return null;
+    });
+
+    return message;
+  }, []);
 
   React.useEffect(() => {
     limitRef.current = limit;
@@ -77,7 +109,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       const requestId = ++historyRequestIdRef.current;
 
       try {
-        const response = await axios.get(
+        const response = await fetchData(
           `/api/chat/history?limit=${historyLimit}`,
         );
 
@@ -85,7 +117,11 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
           return;
         }
 
-        setHistory(response.data);
+        if (!response.ok) {
+          throw new Error("Failed to fetch chat history");
+        }
+
+        setHistory(await response.json());
       } catch (error) {
         if (requestId !== historyRequestIdRef.current) {
           return;
@@ -97,13 +133,15 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
           description: (
             <span>
               Your sidebar history is temporarily unavailable.{" "}
-              <span className="font-medium">Please refresh if it persists.</span>
+              <span className="font-medium">
+                Please refresh if it persists.
+              </span>
             </span>
           ),
         });
       }
     },
-    [],
+    [fetchData],
   );
 
   const refreshHistory = React.useCallback(() => {
@@ -113,13 +151,13 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
   const fetchCredits = React.useCallback(async () => {
     try {
       setCreditsLoading(true);
-      const response = await fetch("/api/credits");
+      const response = await fetchData("/api/credits");
 
       if (!response.ok) {
         throw new Error("Failed to fetch credits");
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as CreditsType;
       // console.log("credits data from context", data);
       setCredits(data.credits);
       setIsPremium(data.isPremium);
@@ -137,7 +175,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
     } finally {
       setCreditsLoading(false);
     }
-  }, []);
+  }, [fetchData]);
 
   const triggerCheck = React.useCallback(() => {
     refreshHistory();
@@ -186,7 +224,9 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
 
         socket.onmessage = (event) => {
           try {
-            const notification = JSON.parse(event.data as string) as Partial<ChatNotification>;
+            const notification = JSON.parse(
+              event.data as string,
+            ) as Partial<ChatNotification>;
 
             if (!notification.event) {
               return;
@@ -249,6 +289,9 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       isUserPremium: isPremium,
       creditsLoading,
       refetchCredits: fetchCredits,
+      pendingBootstrap,
+      setPendingBootstrap,
+      consumePendingBootstrap,
     }),
     [
       limit,
@@ -262,6 +305,9 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       triggerCheck,
       subscribeToNotifications,
       fetchCredits,
+      pendingBootstrap,
+      setPendingBootstrap,
+      consumePendingBootstrap,
     ],
   );
 

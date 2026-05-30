@@ -2,20 +2,25 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { createId } from "@paralleldrive/cuid2";
 import TextComponent from "@/components/text-component";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Send } from "lucide-react";
+import { Loader, Send } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { useChatHook } from "@/components/providers/chat-provider";
+import { toast } from "sonner";
+import { useFetch } from "@/hooks/use-fetch";
 
 export default function Client() {
   const router = useRouter();
   const [inputText, setInputText] = React.useState("");
+  const [isCreating, setIsCreating] = React.useState(false);
   const { data: session } = authClient.useSession();
+  const { setPendingBootstrap } = useChatHook();
+  const { fetchData } = useFetch<{ chatId: string }>();
 
-  const handleSendMessage = () => {
-    if (!inputText || inputText.trim().length === 0) {
+  const handleSendMessage = async () => {
+    if (!inputText || inputText.trim().length === 0 || isCreating) {
       return;
     }
 
@@ -24,28 +29,44 @@ export default function Client() {
       return;
     }
 
-    const chatId = createId();
+    setIsCreating(true);
 
-    // Store message in localStorage
-    localStorage.setItem(
-      `user/${session.user.id}`,
-      JSON.stringify({
-        lastSearchedFor: {
-          chatId,
-          text: inputText,
-          STATUS: "PENDING",
-        },
-      })
-    );
+    try {
+      const response = await fetchData("/api/chat/create", {
+        method: "POST",
+      });
 
-    // Redirect to chat page with the new chatId
-    router.push(`/chat/${chatId}`);
+      if (!response.ok) {
+        const raw = await response.json().catch(() => null);
+        const errMsg =
+          raw &&
+          typeof raw === "object" &&
+          "error" in raw &&
+          typeof (raw as { error: unknown }).error === "string"
+            ? (raw as { error: string }).error
+            : "Could not create chat";
+        toast.error("Could not start chat", { description: errMsg });
+        return;
+      }
+
+      const { chatId } = (await response.json()) as { chatId: string };
+
+      setPendingBootstrap({ chatId, message: inputText });
+      router.push(`/chat/${chatId}`);
+    } catch (error) {
+      console.error("Error creating chat:", error);
+      toast.error("Could not start chat", {
+        description: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      void handleSendMessage();
     }
   };
 
@@ -66,14 +87,21 @@ export default function Client() {
             onChange={(value: string) => setInputText(value)}
             value={inputText}
             onKeyDown={handleKeyDown}
+            disabled={isCreating}
           />
           <div className="flex justify-end items-center gap-2">
             <Button
               size={"icon"}
-              onClick={handleSendMessage}
-              disabled={!inputText || inputText.trim().length === 0}
+              onClick={() => void handleSendMessage()}
+              disabled={
+                !inputText || inputText.trim().length === 0 || isCreating
+              }
             >
-              <Send size={16} />
+              {isCreating ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
             </Button>
           </div>
         </Card>

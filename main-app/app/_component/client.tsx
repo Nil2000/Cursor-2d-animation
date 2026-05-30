@@ -1,25 +1,44 @@
 "use client";
-import { Spotlight } from "@/components/ui/spotlight-new";
-import React from "react";
-import Navbar from "./navbar";
-import HeroSection from "@/components/hero-section";
-import { useTheme } from "next-themes";
+
 import { authClient } from "@/lib/auth-client";
+import { FeaturesSection } from "./landing/features-section";
+import { FinalCta } from "./landing/final-cta";
+import { Footer } from "./landing/footer";
+import { HeroSection } from "./landing/hero-section";
+import { LandingBackground } from "./landing/landing-background";
+import { LandingNavbar } from "./landing/landing-navbar";
+import { PricingSection } from "./landing/pricing-section";
+import { ProductSection } from "./landing/product-section";
+import { TestimonialsSection } from "./landing/testimonials-section";
+import { TrustStrip } from "./landing/trust-strip";
+import { UseCaseSection } from "./landing/use-case-section";
+import { WorkflowSection } from "./landing/workflow-section";
 
 export default function Client() {
-  const { theme } = useTheme();
   const { data: session } = authClient.useSession();
+  const authenticated = Boolean(session?.user);
+  const name = session?.user?.name?.split(" ")[0];
+  const primaryHref = authenticated ? "/chat" : "/login";
+  const pricingHref = authenticated ? "/pricing" : "/login";
+
   return (
-    <div className="h-screen w-full flex flex-col antialiased relative overflow-hidden">
-      <Spotlight
-        theme={
-          theme === "system" ? "dark" : theme === "dark" ? "dark" : "light"
-        }
+    <main className="relative isolate min-h-screen overflow-hidden bg-background text-foreground">
+      <LandingBackground />
+      <LandingNavbar authenticated={authenticated} primaryHref={primaryHref} />
+      <HeroSection
+        authenticated={authenticated}
+        name={name}
+        primaryHref={primaryHref}
       />
-      <div className="w-full h-full lg:w-[1000px] mx-auto flex flex-col items-center gap-4 relative">
-        <Navbar />
-        <HeroSection authenticated={!!session} name={session?.user?.name} />
-      </div>
-    </div>
+      <TrustStrip />
+      <ProductSection primaryHref={primaryHref} />
+      <FeaturesSection />
+      <WorkflowSection />
+      <UseCaseSection />
+      <PricingSection primaryHref={primaryHref} pricingHref={pricingHref} />
+      <TestimonialsSection />
+      <FinalCta primaryHref={primaryHref} />
+      <Footer />
+    </main>
   );
 }

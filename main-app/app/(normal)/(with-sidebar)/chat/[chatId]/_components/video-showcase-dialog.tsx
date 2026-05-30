@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { useFetch } from "@/hooks/use-fetch";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +28,7 @@ export default function VideoDialogShowCase({
     React.useState<string>("medium");
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [downloadError, setDownloadError] = React.useState<string | null>(null);
+  const { fetchData } = useFetch();
 
   // Get the currently selected video based on quality
   const selectedVideo = React.useMemo(() => {
@@ -57,7 +61,7 @@ export default function VideoDialogShowCase({
     setDownloadError(null);
 
     try {
-      const response = await fetch(selectedVideo.url, {
+      const response = await fetchData(selectedVideo.url, {
         method: "GET",
         headers: {
           Accept: "video/mp4,video/*,*/*",
@@ -66,7 +70,7 @@ export default function VideoDialogShowCase({
 
       if (!response.ok) {
         throw new Error(
-          `Failed to fetch video: ${response.status} ${response.statusText}`
+          `Failed to fetch video: ${response.status} ${response.statusText}`,
         );
       }
 
@@ -127,7 +131,9 @@ export default function VideoDialogShowCase({
             ) : selectedVideo?.status === "failed" ? (
               <>
                 <AlertCircle className="w-8 h-8 text-destructive" />
-                <p className="text-destructive">Failed to generate this quality</p>
+                <p className="text-destructive">
+                  Failed to generate this quality
+                </p>
               </>
             ) : (
               <>
@@ -137,13 +143,13 @@ export default function VideoDialogShowCase({
             )}
           </div>
         )}
-        
+
         {downloadError && (
           <div className="text-sm text-destructive text-center">
             {downloadError}
           </div>
         )}
-        
+
         <DialogFooter className="flex-col sm:flex-row gap-3">
           <div className="flex flex-col sm:flex-row gap-3 w-full items-center justify-between">
             <div className="flex items-center gap-2">

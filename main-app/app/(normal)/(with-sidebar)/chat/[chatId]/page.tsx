@@ -1,6 +1,7 @@
 import React from "react";
-import { fetchChatSpaceIfExists } from "@/actions/chatActions";
-import ChatPageV2 from "./_components/clientV2";
+import { fetchChatSpaceForUser } from "@/actions/chatActions";
+import ChatPage from "./_components/client";
+import ChatNotFound from "./_components/chat-not-found";
 import { checkAuthentication } from "@/actions/authActions";
 import { redirect } from "next/navigation";
 
@@ -17,9 +18,11 @@ export default async function page({
   }
 
   const { chatId } = await params;
-  const chatSpace = await fetchChatSpaceIfExists(chatId);
+  const chatSpace = await fetchChatSpaceForUser(chatId, session.id);
 
-  return (
-    <ChatPageV2 chatId={chatId} spaceExists={!!chatSpace} userInfo={session} />
-  );
+  if (!chatSpace) {
+    return <ChatNotFound />;
+  }
+
+  return <ChatPage chatId={chatId} userInfo={session} />;
 }

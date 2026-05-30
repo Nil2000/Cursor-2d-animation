@@ -1,7 +1,16 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { NextRequest, NextResponse } from "next/server";
+import { addChatToSpace } from "@/lib/chat-utils/spaceActions";
+import {
+  createChatGenerationResponse,
+  TOTAL_VIDEO_COST,
+  INSUFFICIENT_CREDITS_MESSAGE,
+} from "@/lib/chat-utils/chatGeneration";
+import { chat, user } from "@/lib/schema";
+import { Messages, Role } from "@/lib/types";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
@@ -58,41 +67,95 @@ export async function GET(
   }
 }
 
-// export async function POST(
-//   req: NextRequest,
-//   { params }: { params: Promise<{ chatSpaceId: string }> }
-// ) {
-//   const { chatSpaceId } = await params;
-//   const { message, contextId } = await req.json();
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ chatSpaceId: string }> },
+) {
+  const { chatSpaceId } = await params;
+  const { message } = await req.json();
 
-//   if (!chatSpaceId || !message || !contextId) {
-//     return new Response("Invalid request", { status: 400 });
-//   }
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-//   try {
-//     await addChatToSpace(chatSpaceId, "user", message);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-//     const response = await generateChatCompletions({
-//       message,
-//       previousContextId: contextId,
-//     });
+  if (!chatSpaceId || !message) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
 
-//     await addChatToSpace(
-//       chatSpaceId,
-//       "assistant",
-//       response.text,
-//       response.contextId
-//     );
+  const chatSpace = await db.query.chat_space.findFirst({
+    where: (space, { eq }) => eq(space.id, chatSpaceId),
+  });
 
-//     return NextResponse.json(
-//       { response: response.text, contextId: response.contextId },
-//       { status: 200 }
-//     );
-//   } catch (error) {
-//     console.error("Error creating chat message", error);
-//     return NextResponse.json(
-//       { error: "Internal server error" },
-//       { status: 500 }
-//     );
-//   }
-// }
+  if (!chatSpace) {
+    return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+  }
+
+  if (chatSpace.userId !== session.user.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userData = await db
+    .select({
+      credits: user.credits,
+      isPremium: user.isPremium,
+    })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+    .limit(1);
+
+  if (!userData || userData.length === 0) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const { credits, isPremium: rawIsPremium } = userData[0];
+  const isPremium = Boolean(rawIsPremium);
+
+  if (!isPremium && credits < TOTAL_VIDEO_COST) {
+    return NextResponse.json(
+      {
+        error: INSUFFICIENT_CREDITS_MESSAGE,
+      },
+      { status: 403 },
+    );
+  }
+
+  try {
+    const existingChats = await db
+      .select()
+      .from(chat)
+      .where(eq(chat.chatSpaceId, chatSpaceId));
+
+    const isFirstConversation = existingChats.length === 0;
+
+    await addChatToSpace(chatSpaceId, "user", message);
+
+    const messages: Messages = [
+      ...existingChats.map((chatRow) => ({
+        content: chatRow.body,
+        role: chatRow.type === "user" ? Role.User : Role.Assistant,
+      })),
+      {
+        content: message,
+        role: Role.User,
+      },
+    ];
+
+    return createChatGenerationResponse({
+      chatId: chatSpaceId,
+      messages,
+      isPremium,
+      sessionUserId: session.user.id,
+      isFirstConversation,
+    });
+  } catch (error) {
+    console.error("Error generating chat completions", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
