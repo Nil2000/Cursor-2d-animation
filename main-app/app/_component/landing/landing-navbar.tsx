@@ -27,17 +27,13 @@ export function LandingNavbar({
 }: LandingNavbarProps) {
   return (
     <header className="fixed inset-x-0 top-3 z-50 px-3 sm:top-5 sm:px-6">
-      <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between rounded-2xl border bg-background/80 px-3 shadow-sm backdrop-blur-xl 2xl:max-w-[88rem]">
+      <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between rounded-2xl border bg-background/80 px-3 shadow-sm backdrop-blur-xl 2xl:max-w-352">
         <Link
           href="/"
           aria-label="Manim AI home"
           className="flex items-center gap-2 rounded-xl transition-opacity hover:opacity-90"
         >
-          <Logo
-            showWordmark
-            className="border border-border"
-            wordmarkClassName="text-lg"
-          />
+          <Logo showWordmark wordmarkClassName="text-lg" />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

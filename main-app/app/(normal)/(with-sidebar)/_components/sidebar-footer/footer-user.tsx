@@ -97,7 +97,6 @@ export default function FooterUser({ userInfo }: FooterUserProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              variant="destructive"
               onClick={async () => {
                 await authClient.signOut();
               }}

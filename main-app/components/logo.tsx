@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { LogoMark } from "./logo-mark";
+import Image from "next/image";
 
 export const APP_NAME = "Manim";
 
@@ -19,7 +20,9 @@ export default function Logo({
   wordmarkClassName,
 }: LogoProps) {
   const mark = (
-    <LogoMark
+    <Image
+      src="/manimai-icon-only.svg"
+      alt="Manim Logo"
       width={width}
       height={height}
       className={cn("rounded-sm p-1", className)}
