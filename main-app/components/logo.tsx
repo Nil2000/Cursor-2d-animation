@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { LogoMark } from "./logo-mark";
 import Image from "next/image";
 
 export const APP_NAME = "Manim";
