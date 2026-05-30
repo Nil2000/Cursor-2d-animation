@@ -1,9 +1,5 @@
 import { runCodeInDocker } from "./sandbox/runCodeInDocker";
-import {
-  processMessagePayloadSchema,
-  type ProcessMessagePayload,
-  type VideoPayload,
-} from "./types";
+import { processMessagePayloadSchema, type VideoPayload } from "./types";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
