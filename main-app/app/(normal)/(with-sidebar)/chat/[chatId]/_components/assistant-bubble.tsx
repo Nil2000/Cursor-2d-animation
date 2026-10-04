@@ -1,11 +1,10 @@
-import { Card } from "@/components/ui/card";
 import React from "react";
-import MachineLogo from "./machine-logo";
-import { ClientMessageVideoType } from "@/lib/types";
-import VideoMessage from "@/components/video-showcase";
-import { Button } from "@/components/ui/button";
 import { Code } from "lucide-react";
+import AnimationFrame, { stageFromReply } from "@/components/animation-frame";
+import { Button } from "@/components/ui/button";
+import { ClientMessageVideoType } from "@/lib/types";
 import { extractPythonCode } from "@/lib/chat-utils/getPythonBlockCode";
+import AssistantRow from "./assistant-row";
 import CodeDialog from "./code-dialog";
 
 type Props = {
@@ -23,12 +22,6 @@ const AssistantBubble = React.memo(function AssistantBubble({
 }: Props) {
   const [isCodeDialogOpen, setIsCodeDialogOpen] = React.useState(false);
 
-  const handleVideoClick = React.useCallback(() => {
-    if (chat_videos && onVideoClick) {
-      onVideoClick(chat_videos);
-    }
-  }, [chat_videos, onVideoClick]);
-
   const displayVideo = React.useMemo(() => {
     return (
       chat_videos?.find((video) => video.quality === "medium") ??
@@ -40,48 +33,51 @@ const AssistantBubble = React.memo(function AssistantBubble({
     return body ? extractPythonCode(body) : null;
   }, [body]);
 
+  const stage = stageFromReply(error, displayVideo);
+
+  const handleVideoClick = React.useCallback(() => {
+    if (chat_videos && onVideoClick) {
+      onVideoClick(chat_videos);
+    }
+  }, [chat_videos, onVideoClick]);
+
+  const failureDetail = error
+    ? error
+    : displayVideo
+      ? undefined
+      : "No video was generated for this reply.";
+
   return (
-    <div className="flex justify-start items-start gap-2">
-      <MachineLogo />
-      {error ? (
-        <Card className="p-4 sm:max-w-[75%] max-w-full w-max rounded-md bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 shadow-none">
-          <p>Error: {error}</p>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {displayVideo ? (
-            <VideoMessage
-              video={displayVideo}
-              onVideoClick={handleVideoClick}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No video was generated for this reply.
-            </p>
-          )}
-
-          {pythonCode && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-max mt-1 gap-2 rounded-md"
-              onClick={() => setIsCodeDialogOpen(true)}
-            >
-              <Code size={16} />
-              View generated code
-            </Button>
-          )}
-
-          {pythonCode && (
-            <CodeDialog
-              isOpen={isCodeDialogOpen}
-              onClose={() => setIsCodeDialogOpen(false)}
-              code={pythonCode}
-            />
-          )}
-        </div>
-      )}
-    </div>
+    <AssistantRow>
+      <div className="flex min-w-0 flex-col">
+        <AnimationFrame
+          stage={stage}
+          video={displayVideo}
+          onOpen={stage === "ready" ? handleVideoClick : undefined}
+          error={stage === "failed" ? failureDetail : undefined}
+          action={
+            pythonCode ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-md"
+                onClick={() => setIsCodeDialogOpen(true)}
+              >
+                <Code size={16} />
+                View code
+              </Button>
+            ) : null
+          }
+        />
+        {pythonCode && (
+          <CodeDialog
+            isOpen={isCodeDialogOpen}
+            onClose={() => setIsCodeDialogOpen(false)}
+            code={pythonCode}
+          />
+        )}
+      </div>
+    </AssistantRow>
   );
 });
 

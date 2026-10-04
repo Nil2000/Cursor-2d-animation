@@ -1,6 +1,6 @@
 import type { CreditPackage } from "./types";
 
-export const MODEL = "openai/gpt-5-mini";
+export const MODEL = "meta/muse-spark-1.3";
 
 export const OPENROUTER_CHAT_COMPLETION_URL =
   "https://openrouter.ai/api/v1/chat/completions";
