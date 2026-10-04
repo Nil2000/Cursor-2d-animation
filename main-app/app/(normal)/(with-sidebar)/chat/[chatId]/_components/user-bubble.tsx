@@ -31,7 +31,7 @@ const UserBubble = React.memo(function UserBubble({
           </Button>
         </div>
       )}
-      <Card className="sm:max-w-[75%] rounded-md shadow-none bg-primary text-primary-foreground mr-2 px-3 py-2">
+      <Card className="max-w-[60%] rounded-md shadow-none bg-primary text-primary-foreground mr-2 px-3 py-2">
         {messageBody}
       </Card>
       <UserAvatar imgUrl={imgUrl} />

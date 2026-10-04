@@ -86,7 +86,7 @@ export default function AnimationFrame({
   const canOpen = stage === "ready" && Boolean(video?.url) && Boolean(onOpen);
 
   return (
-    <div className="w-full max-w-[320px]" aria-busy={busy || undefined}>
+    <div className="w-full sm:w-[60%]" aria-busy={busy || undefined}>
       <Card
         className={cn(
           "relative w-full gap-0 overflow-hidden rounded-md p-0 shadow-sm",

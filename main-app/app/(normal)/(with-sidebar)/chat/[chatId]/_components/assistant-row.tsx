@@ -7,9 +7,9 @@ export default function AssistantRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-start gap-2">
+    <div className="flex w-full items-start justify-start gap-2">
       <MachineLogo />
-      {children}
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
