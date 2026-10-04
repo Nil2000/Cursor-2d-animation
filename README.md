@@ -114,8 +114,6 @@ Recommended production split:
 - Use managed Postgres and managed Redis where possible.
 - Store rendered assets in S3-compatible object storage.
 
-See `DEPLOYMENT_PLAN.md` for full rollout phases, checklist, and launch order.
-
 ## Reliability and security notes
 
 - Prefer authenticated/internal access for status and internal APIs.
@@ -126,6 +124,4 @@ See `DEPLOYMENT_PLAN.md` for full rollout phases, checklist, and launch order.
 
 ## Helpful docs
 
-- `DEPLOYMENT_PLAN.md` - production deployment phases and checklist.
-- `IMPROVEMENT_FINDINGS.md` - pending hardening and quality improvements.
 - `AGENTS.md` - contributor/agent workflow and project conventions.
