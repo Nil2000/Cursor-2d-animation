@@ -17,6 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { TypingAnimation } from "@/components/ui/typing-animation";
 import { cn } from "@/lib/utils";
 
 type SidebarHistoryProps = {
@@ -24,6 +25,7 @@ type SidebarHistoryProps = {
   limit: number;
   onShowMore: () => void;
   isLoading?: boolean;
+  typingChatId?: string | null;
 };
 
 function formatChatTitle(title: string | null | undefined, maxLength = 30) {
@@ -37,6 +39,7 @@ export function SidebarHistory({
   limit,
   onShowMore,
   isLoading = false,
+  typingChatId = null,
 }: SidebarHistoryProps) {
   const pathname = usePathname();
 
@@ -76,6 +79,7 @@ export function SidebarHistory({
                   {history.map((item) => {
                     const href = `/chat/${item.id}`;
                     const isActive = pathname === href;
+                    const title = formatChatTitle(item.title);
 
                     return (
                       <SidebarMenuItem key={item.id}>
@@ -98,9 +102,19 @@ export function SidebarHistory({
                                   : "text-muted-foreground",
                               )}
                             />
-                            <span className="truncate">
-                              {formatChatTitle(item.title)}
-                            </span>
+                            {item.id === typingChatId ? (
+                              <TypingAnimation
+                                key={title}
+                                as="span"
+                                className="min-w-0 truncate text-sm font-normal leading-none"
+                                showCursor={false}
+                                typeSpeed={40}
+                              >
+                                {title}
+                              </TypingAnimation>
+                            ) : (
+                              <span className="truncate">{title}</span>
+                            )}
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

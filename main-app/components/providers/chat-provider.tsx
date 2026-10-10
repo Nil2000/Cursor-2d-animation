@@ -38,6 +38,7 @@ type ChatPageContextProps = {
   pendingBootstrap: PendingBootstrap | null;
   setPendingBootstrap: (payload: PendingBootstrap) => void;
   consumePendingBootstrap: (chatId: string) => string | null;
+  typingChatId: string | null;
 };
 
 type ChatPageProviderProps = {
@@ -79,6 +80,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
   const [creditsLoading, setCreditsLoading] = React.useState<boolean>(true);
   const [pendingBootstrap, setPendingBootstrapState] =
     React.useState<PendingBootstrap | null>(null);
+  const [typingChatId, setTypingChatId] = React.useState<string | null>(null);
   const { fetchData } = useFetch();
 
   const setPendingBootstrap = React.useCallback((payload: PendingBootstrap) => {
@@ -240,6 +242,12 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
               notification.event === CHAT_SPACE_CREATED_EVENT ||
               notification.event === CHAT_SPACE_UPDATED_EVENT
             ) {
+              if (
+                notification.event === CHAT_SPACE_UPDATED_EVENT &&
+                notification.payload?.chatSpaceId
+              ) {
+                setTypingChatId(notification.payload.chatSpaceId);
+              }
               refreshHistory();
             }
           } catch (error) {
@@ -292,6 +300,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       pendingBootstrap,
       setPendingBootstrap,
       consumePendingBootstrap,
+      typingChatId,
     }),
     [
       limit,
@@ -308,6 +317,7 @@ const ChatPageProvider: React.FC<ChatPageProviderProps> = ({
       pendingBootstrap,
       setPendingBootstrap,
       consumePendingBootstrap,
+      typingChatId,
     ],
   );
 

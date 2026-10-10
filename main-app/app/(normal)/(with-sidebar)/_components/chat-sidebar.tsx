@@ -34,6 +34,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
     usersCredits,
     isUserPremium,
     creditsLoading,
+    typingChatId,
   } = useChatHook();
 
   const isNewChatActive = pathname === "/chat";
@@ -88,6 +89,7 @@ export function ChatSidebar({ userInfo }: ChatSidebarProps) {
           <SidebarHistory
             history={history}
             limit={limit}
+            typingChatId={typingChatId}
             onShowMore={() => setLimit(limit + 5)}
           />
         </div>
