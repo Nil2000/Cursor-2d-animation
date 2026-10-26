@@ -78,6 +78,7 @@ export const chat_space = pgTable("chat_space", {
     .primaryKey()
     .$defaultFn(() => createId()),
   title: text("title"),
+  generatingSince: timestamp("generating_since"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
   userId: text("user_id")

@@ -10,7 +10,7 @@ import {
 } from "../types";
 import { sendToQueue } from "../queue-utils/sendToQueue";
 import { getPythonBlockCodeFromMessage } from "./getPythonBlockCode";
-import { setTitleToChatSpace } from "./spaceActions";
+import { releaseGeneration, setTitleToChatSpace } from "./spaceActions";
 import { completeTextForChat } from "./completeTextForChat";
 import { getTitleFromMessage } from "./getTitleFromMessage";
 import { CHAT_SPACE_UPDATED_EVENT } from "./chatNotifications";
@@ -29,6 +29,30 @@ export class InsufficientCreditsError extends Error {
 }
 
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function loadGenerationAccess(sessionUserId: string) {
+  const rows = await db
+    .select({
+      credits: user.credits,
+      isPremium: user.isPremium,
+    })
+    .from(user)
+    .where(eq(user.id, sessionUserId))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+
+  const isPremium = Boolean(row.isPremium);
+
+  return {
+    isPremium,
+    credits: row.credits,
+    allowed: isPremium || row.credits >= TOTAL_VIDEO_COST,
+  };
+}
 
 export type ChatGenerationOptions = {
   chatId: string;
@@ -180,5 +204,11 @@ export async function createChatGenerationResponse({
       { error: "Failed to get AI response" },
       { status: 500 },
     );
+  } finally {
+    try {
+      await releaseGeneration(chatId);
+    } catch (error) {
+      console.error("Error releasing generation claim", error);
+    }
   }
 }
