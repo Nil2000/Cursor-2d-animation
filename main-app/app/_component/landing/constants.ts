@@ -194,6 +194,9 @@ export const testimonials = [
   },
 ] as const;
 
+export const pressClass =
+  "active:scale-[0.97] transition-[color,box-shadow,transform] duration-150 ease-out";
+
 export const planHighlights = [
   "AI animation planning",
   "Manim code generation",

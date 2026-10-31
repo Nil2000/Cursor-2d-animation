@@ -5,6 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { features } from "./constants";
+import { Reveal } from "./reveal";
 import { SectionHeader } from "./section-header";
 
 export function FeaturesSection() {
@@ -18,12 +19,12 @@ export function FeaturesSection() {
         />
 
         <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {features.map((feature) => {
+          {features.map((feature, index) => {
             const Icon = feature.icon;
 
             return (
+              <Reveal key={feature.title} delay={index * 0.06} className="h-full">
               <Card
-                key={feature.title}
                 className="group h-full border-border/70 bg-card/70 transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg"
               >
                 <CardHeader>
@@ -36,6 +37,7 @@ export function FeaturesSection() {
                   </CardDescription>
                 </CardHeader>
               </Card>
+              </Reveal>
             );
           })}
         </div>

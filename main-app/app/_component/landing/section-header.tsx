@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Reveal } from "./reveal";
 
 type SectionHeaderProps = {
   eyebrow: string;
@@ -15,13 +16,14 @@ export function SectionHeader({
   align = "center",
 }: SectionHeaderProps) {
   return (
-    <div
-      className={cn(
-        "max-w-3xl",
-        align === "center" && "mx-auto text-center",
-        align === "left" && "text-left",
-      )}
-    >
+    <Reveal>
+      <div
+        className={cn(
+          "max-w-3xl",
+          align === "center" && "mx-auto text-center",
+          align === "left" && "text-left",
+        )}
+      >
       <Badge variant="outline" className="mb-4 rounded-full text-primary">
         {eyebrow}
       </Badge>
@@ -31,6 +33,7 @@ export function SectionHeader({
       <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
         {description}
       </p>
-    </div>
+      </div>
+    </Reveal>
   );
 }

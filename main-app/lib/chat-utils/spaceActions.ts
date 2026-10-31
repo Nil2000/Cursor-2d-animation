@@ -1,34 +1,76 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { db } from "../db";
 import { chat, chat_space } from "../schema";
+import { GENERATION_CLAIM_TIMEOUT_MS } from "./generationGuard";
 
-export const createEmptyChatSpace = async (userId: string) => {
+export const createChatSpaceWithMessage = async (
+  userId: string,
+  message: string,
+) => {
   try {
-    const [chatSpace] = await db
-      .insert(chat_space)
-      .values({
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId,
-      })
-      .returning({ id: chat_space.id });
+    const now = new Date();
 
-    if (!chatSpace) {
-      throw new Error("Failed to create chat space");
-    }
+    return await db.transaction(async (tx) => {
+      const [chatSpace] = await tx
+        .insert(chat_space)
+        .values({
+          createdAt: now,
+          updatedAt: now,
+          userId,
+        })
+        .returning({ id: chat_space.id });
 
-    return chatSpace;
+      if (!chatSpace) {
+        throw new Error("Failed to create chat space");
+      }
+
+      await tx.insert(chat).values({
+        createdAt: now,
+        updatedAt: now,
+        chatSpaceId: chatSpace.id,
+        body: message,
+        type: "user",
+      });
+
+      return chatSpace;
+    });
   } catch (error) {
     console.error("Error creating chat space", error);
     throw new Error("Internal server error");
   }
 };
 
+export const claimGeneration = async (chatSpaceId: string) => {
+  const cutoff = new Date(Date.now() - GENERATION_CLAIM_TIMEOUT_MS);
+  const claimed = await db
+    .update(chat_space)
+    .set({ generatingSince: new Date() })
+    .where(
+      and(
+        eq(chat_space.id, chatSpaceId),
+        or(
+          isNull(chat_space.generatingSince),
+          lt(chat_space.generatingSince, cutoff),
+        ),
+      ),
+    )
+    .returning({ id: chat_space.id });
+
+  return claimed.length > 0;
+};
+
+export const releaseGeneration = async (chatSpaceId: string) => {
+  await db
+    .update(chat_space)
+    .set({ generatingSince: null })
+    .where(eq(chat_space.id, chatSpaceId));
+};
+
 export const addChatToSpace = async (
   chatSpaceId: string,
   messageType: "user" | "assistant",
   messageBody: string,
-  contextId?: string
+  contextId?: string,
 ) => {
   try {
     const chatId = await db
@@ -53,7 +95,7 @@ export const addChatToSpace = async (
 
 export const setTitleToChatSpace = async (
   chatSpaceId: string,
-  title: string
+  title: string,
 ) => {
   try {
     const updatedChatSpace = await db

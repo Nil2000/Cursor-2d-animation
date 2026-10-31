@@ -1,10 +1,11 @@
 import {
   createChatGenerationResponse,
-  TOTAL_VIDEO_COST,
   INSUFFICIENT_CREDITS_MESSAGE,
+  loadGenerationAccess,
 } from "@/lib/chat-utils/chatGeneration";
+import { claimGeneration } from "@/lib/chat-utils/spaceActions";
 import { db } from "@/lib/db";
-import { chat, user } from "@/lib/schema";
+import { chat } from "@/lib/schema";
 import { Messages, Role } from "@/lib/types";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -26,29 +27,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Check user credits and premium status
-  const userData = await db
-    .select({
-      credits: user.credits,
-      isPremium: user.isPremium,
-    })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  if (!userData || userData.length === 0) {
+  const access = await loadGenerationAccess(session.user.id);
+  if (!access) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { credits, isPremium: rawIsPremium } = userData[0];
-  const isPremium = Boolean(rawIsPremium);
-
-  // Validate credits: user must be premium or have enough credits for video generation
-  if (!isPremium && credits < TOTAL_VIDEO_COST) {
+  if (!access.allowed) {
     return NextResponse.json(
-      {
-        error: INSUFFICIENT_CREDITS_MESSAGE,
-      },
+      { error: INSUFFICIENT_CREDITS_MESSAGE },
       { status: 403 },
     );
   }
@@ -89,10 +75,18 @@ export async function POST(req: NextRequest) {
     // Check if this is the first conversation after deletion
     const isFirstConversation = remainingChats.length === 1;
 
+    const claimed = await claimGeneration(chatId);
+    if (!claimed) {
+      return NextResponse.json(
+        { error: "Generation already in progress", code: "in_progress" },
+        { status: 409 },
+      );
+    }
+
     return createChatGenerationResponse({
       chatId,
       messages,
-      isPremium,
+      isPremium: access.isPremium,
       sessionUserId: session.user.id,
       isFirstConversation,
       retryMode: true,

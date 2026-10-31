@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, History, Loader2, MessageSquareText } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { TypingAnimation } from "@/components/ui/typing-animation";
 import { cn } from "@/lib/utils";
 
 type SidebarHistoryProps = {
@@ -24,6 +26,7 @@ type SidebarHistoryProps = {
   limit: number;
   onShowMore: () => void;
   isLoading?: boolean;
+  typingChatId?: string | null;
 };
 
 function formatChatTitle(title: string | null | undefined, maxLength = 30) {
@@ -32,11 +35,62 @@ function formatChatTitle(title: string | null | undefined, maxLength = 30) {
   return `${text.slice(0, maxLength)}…`;
 }
 
+// ponytail: the mobile sidebar is a sheet and unmounts on close, which would
+// restart the typing effect. This set outlives that unmount. A full reload
+// clears it, which matches typingChatId (also in-memory).
+const typedChatIds = new Set<string>();
+
+function HistoryTitle({
+  chatId,
+  title,
+  typing,
+}: {
+  chatId: string;
+  title: string;
+  typing: boolean;
+}) {
+  const playedKey = `${chatId}:${title}`;
+  const [animate, setAnimate] = useState(
+    () => typing && !typedChatIds.has(playedKey),
+  );
+
+  if (typing && !typedChatIds.has(playedKey) && !animate) {
+    setAnimate(true);
+  }
+
+  useEffect(() => {
+    if (!animate) {
+      return;
+    }
+
+    return () => {
+      typedChatIds.add(playedKey);
+    };
+  }, [animate, playedKey]);
+
+  if (!animate) {
+    return <span className="truncate">{title}</span>;
+  }
+
+  return (
+    <TypingAnimation
+      key={title}
+      as="span"
+      className="min-w-0 truncate text-sm font-normal leading-none"
+      showCursor={false}
+      typeSpeed={40}
+    >
+      {title}
+    </TypingAnimation>
+  );
+}
+
 export function SidebarHistory({
   history,
   limit,
   onShowMore,
   isLoading = false,
+  typingChatId = null,
 }: SidebarHistoryProps) {
   const pathname = usePathname();
 
@@ -76,6 +130,7 @@ export function SidebarHistory({
                   {history.map((item) => {
                     const href = `/chat/${item.id}`;
                     const isActive = pathname === href;
+                    const title = formatChatTitle(item.title);
 
                     return (
                       <SidebarMenuItem key={item.id}>
@@ -98,9 +153,11 @@ export function SidebarHistory({
                                   : "text-muted-foreground",
                               )}
                             />
-                            <span className="truncate">
-                              {formatChatTitle(item.title)}
-                            </span>
+                            <HistoryTitle
+                              chatId={item.id}
+                              title={title}
+                              typing={item.id === typingChatId}
+                            />
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
