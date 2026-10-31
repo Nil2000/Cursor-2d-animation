@@ -2,6 +2,9 @@ import Link from "next/link";
 import { ArrowRightIcon, SparklesIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { pressClass } from "./constants";
+import { Reveal } from "./reveal";
 
 type FinalCtaProps = {
   primaryHref: string;
@@ -10,7 +13,7 @@ type FinalCtaProps = {
 export function FinalCta({ primaryHref }: FinalCtaProps) {
   return (
     <section className="px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28">
-      <div className="mx-auto w-full max-w-7xl overflow-hidden rounded-[2rem] border bg-card/80 p-6 text-center shadow-2xl backdrop-blur sm:p-10 lg:p-14 2xl:max-w-[88rem]">
+      <Reveal className="mx-auto w-full max-w-7xl overflow-hidden rounded-[2rem] border bg-card/80 p-6 text-center shadow-2xl backdrop-blur sm:p-10 lg:p-14 2xl:max-w-[88rem]">
         <Badge variant="secondary" className="rounded-full">
           <SparklesIcon />
           Ready when your idea is
@@ -23,7 +26,11 @@ export function FinalCta({ primaryHref }: FinalCtaProps) {
           Manim-style animation you can use immediately.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button asChild size="lg" className="group h-12 rounded-xl px-7">
+          <Button
+            asChild
+            size="lg"
+            className={cn("group h-12 rounded-xl px-7", pressClass)}
+          >
             <Link href={primaryHref}>
               Start creating
               <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
@@ -38,7 +45,7 @@ export function FinalCta({ primaryHref }: FinalCtaProps) {
             <Link href="#features">Review features</Link>
           </Button>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

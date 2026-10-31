@@ -9,7 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { planHighlights } from "./constants";
+import { cn } from "@/lib/utils";
+import { planHighlights, pressClass } from "./constants";
+import { Reveal } from "./reveal";
 
 type PricingSectionProps = {
   primaryHref: string;
@@ -23,7 +25,8 @@ export function PricingSection({
   return (
     <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
       <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch 2xl:max-w-[88rem]">
-        <Card className="overflow-hidden border-border/70 bg-card/80 shadow-xl">
+        <Reveal className="h-full">
+        <Card className="h-full overflow-hidden border-border/70 bg-card/80 shadow-xl">
           <CardHeader>
             <Badge
               variant="outline"
@@ -53,7 +56,11 @@ export function PricingSection({
               ))}
             </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="h-12 rounded-xl">
+              <Button
+                asChild
+                size="lg"
+                className={cn("h-12 rounded-xl", pressClass)}
+              >
                 <Link href={pricingHref}>See plans</Link>
               </Button>
               <Button
@@ -67,8 +74,10 @@ export function PricingSection({
             </div>
           </CardContent>
         </Card>
+        </Reveal>
 
-        <Card className="relative overflow-hidden border-primary/20 bg-primary p-0 text-primary-foreground shadow-2xl">
+        <Reveal delay={0.08} className="h-full">
+        <Card className="relative h-full overflow-hidden border-primary/20 bg-primary p-0 text-primary-foreground shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/80" />
           <CardContent className="relative flex h-full flex-col justify-between gap-10 p-6 sm:p-8">
             <div>
@@ -97,6 +106,7 @@ export function PricingSection({
             </div>
           </CardContent>
         </Card>
+        </Reveal>
       </div>
     </section>
   );

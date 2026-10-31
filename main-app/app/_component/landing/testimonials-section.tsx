@@ -2,6 +2,7 @@ import { StarIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { testimonials } from "./constants";
+import { Reveal } from "./reveal";
 import { SectionHeader } from "./section-header";
 
 export function TestimonialsSection() {
@@ -15,10 +16,14 @@ export function TestimonialsSection() {
         />
 
         <div className="mt-12 grid gap-4 lg:grid-cols-3">
-          {testimonials.map((testimonial) => (
-            <Card
+          {testimonials.map((testimonial, index) => (
+            <Reveal
               key={testimonial.name}
-              className="border-border/70 bg-card/75 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              delay={index * 0.06}
+              className="h-full"
+            >
+            <Card
+              className="h-full border-border/70 bg-card/75 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
               <CardContent className="p-6">
                 <div className="flex gap-1 text-primary">
@@ -46,6 +51,7 @@ export function TestimonialsSection() {
                 </div>
               </CardContent>
             </Card>
+            </Reveal>
           ))}
         </div>
       </div>

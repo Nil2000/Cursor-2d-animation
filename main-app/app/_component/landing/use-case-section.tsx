@@ -1,6 +1,7 @@
 import { MonitorPlayIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCases } from "./constants";
+import { Reveal } from "./reveal";
 import { SectionHeader } from "./section-header";
 
 export function UseCaseSection() {
@@ -14,6 +15,7 @@ export function UseCaseSection() {
             title="Made for visualizing ideas that deserve more than static slides."
             description="Use Manim AI anywhere clarity depends on motion, sequence, and guided attention."
           />
+          <Reveal delay={0.12}>
           <div className="rounded-3xl border bg-background/70 p-4">
             <div className="flex items-center gap-3">
               <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -28,15 +30,16 @@ export function UseCaseSection() {
               </div>
             </div>
           </div>
+          </Reveal>
         </div>
 
         <div className="grid gap-4">
-          {useCases.map((item) => {
+          {useCases.map((item, index) => {
             const Icon = item.icon;
 
             return (
+              <Reveal key={item.title} delay={index * 0.06}>
               <Card
-                key={item.title}
                 className="group border-border/70 bg-background/70 transition duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-md"
               >
                 <CardContent className="flex gap-4 p-5">
@@ -51,6 +54,7 @@ export function UseCaseSection() {
                   </div>
                 </CardContent>
               </Card>
+              </Reveal>
             );
           })}
         </div>

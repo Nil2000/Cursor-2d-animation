@@ -5,6 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { workflowSteps } from "./constants";
+import { Reveal } from "./reveal";
 import { SectionHeader } from "./section-header";
 
 export function WorkflowSection() {
@@ -18,13 +19,13 @@ export function WorkflowSection() {
         />
 
         <div className="mt-12 grid gap-4 lg:grid-cols-3">
-          {workflowSteps.map((item) => {
+          {workflowSteps.map((item, index) => {
             const Icon = item.icon;
 
             return (
+              <Reveal key={item.step} delay={index * 0.06} className="h-full">
               <Card
-                key={item.step}
-                className="relative overflow-hidden border-border/70 bg-card/75 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                className="relative h-full overflow-hidden border-border/70 bg-card/75 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="absolute right-6 top-6 text-6xl font-semibold tracking-tight text-muted-foreground/10">
                   {item.step}
@@ -39,6 +40,7 @@ export function WorkflowSection() {
                   </CardDescription>
                 </CardHeader>
               </Card>
+              </Reveal>
             );
           })}
         </div>
