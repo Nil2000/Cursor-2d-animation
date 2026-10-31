@@ -23,6 +23,10 @@ import {
   CHAT_VIDEO_STATUS_UPDATED_EVENT,
   type ChatNotification,
 } from "@/lib/chat-utils/chatNotifications";
+import {
+  GENERATION_CLAIM_TIMEOUT_MS,
+  shouldAutoGenerate,
+} from "@/lib/chat-utils/generationGuard";
 import { toast } from "sonner";
 import { useFetch } from "@/hooks/use-fetch";
 
@@ -45,6 +49,7 @@ export default function ChatPage({ chatId, userInfo }: Props) {
   const [messages, setMessages] = React.useState<ClientMessageType[]>([]);
   const [spaceLoading, setSpaceLoading] = React.useState<boolean>(true);
   const [loading, setLoading] = React.useState<boolean>(false);
+  const [genFailed, setGenFailed] = React.useState(false);
   const [inputText, setInputText] = React.useState<string>("");
   const [videoDialogOpen, setVideoDialogOpen] = React.useState<boolean>(false);
   const [selectedVideos, setSelectedVideos] = React.useState<
@@ -53,14 +58,14 @@ export default function ChatPage({ chatId, userInfo }: Props) {
   const messageContainerRef = React.useRef<HTMLDivElement>(null);
   const inputContainerRef = React.useRef<HTMLDivElement>(null);
   const abortController = React.useRef<AbortController | null>(null);
-  const bootstrappedChatIdRef = React.useRef<string | null>(null);
+  const autoGenerateRef = React.useRef<string | null>(null);
+  const genRequestRef = React.useRef(0);
   const router = useRouter();
   const {
     usersCredits,
     creditsLoading,
     refetchCredits,
     subscribeToNotifications,
-    consumePendingBootstrap,
   } = useChatHook();
   const { fetchData } = useFetch<{ messages: ClientMessageType[] }>();
 
@@ -307,24 +312,163 @@ export default function ChatPage({ chatId, userInfo }: Props) {
     return selectedVideos.map((video) => videosById.get(video.id) ?? video);
   }, [messages, videoDialogOpen, selectedVideos]);
 
+  const generateFromSavedRef = React.useRef<() => Promise<void>>(
+    async () => {},
+  );
+
+  const generateFromSaved = React.useCallback(async () => {
+    const requestId = ++genRequestRef.current;
+    const isCurrent = () => genRequestRef.current === requestId;
+
+    setGenFailed(false);
+    setLoading(true);
+
+    try {
+      const response = await fetchData(`/api/chat/${chatId}`, {
+        method: "POST",
+      });
+      if (!isCurrent()) {
+        return;
+      }
+
+      if (response.status === 409) {
+        const raw = await response.json().catch(() => null);
+        const code =
+          raw && typeof raw === "object" && "code" in raw
+            ? (raw as { code: unknown }).code
+            : null;
+
+        if (code === "already_answered") {
+          await getChatHistory();
+          if (isCurrent()) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (code === "in_progress") {
+          // ponytail: poll until the other request finishes. Upgrade path is
+          // the existing chat-space-updated websocket event.
+          const deadline = Date.now() + GENERATION_CLAIM_TIMEOUT_MS;
+          while (Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            if (!isCurrent()) {
+              return;
+            }
+
+            const history = await fetchData(`/api/chat/${chatId}`);
+            if (!isCurrent()) {
+              return;
+            }
+            if (!history.ok) {
+              continue;
+            }
+
+            const data = (await history.json()) as {
+              messages: ClientMessageType[];
+            };
+            const last = data.messages[data.messages.length - 1];
+            if (last?.type === Role.Assistant) {
+              setMessages(data.messages);
+              setLoading(false);
+              return;
+            }
+          }
+
+          if (!isCurrent()) {
+            return;
+          }
+          setGenFailed(true);
+          setLoading(false);
+          showErrorToast(
+            "Could not generate animation",
+            "The response took too long.",
+          );
+          return;
+        }
+      }
+
+      if (!response.ok) {
+        const raw = await response.json().catch(() => null);
+        const errMsg =
+          raw &&
+          typeof raw === "object" &&
+          "error" in raw &&
+          typeof (raw as { error: unknown }).error === "string"
+            ? (raw as { error: string }).error
+            : "Request failed";
+        showErrorToast("Could not generate animation", errMsg);
+        setGenFailed(true);
+        setLoading(false);
+        return;
+      }
+
+      if (!isCurrent()) {
+        return;
+      }
+      await handleChatApiResponse(response);
+    } catch (error) {
+      if (!isCurrent()) {
+        return;
+      }
+      console.error("Error generating saved message:", error);
+      showErrorToast(
+        "Could not generate animation",
+        "Your message could not be sent.",
+      );
+      setGenFailed(true);
+      setLoading(false);
+    }
+  }, [chatId, fetchData, getChatHistory, handleChatApiResponse]);
+
+  generateFromSavedRef.current = generateFromSaved;
+  const fetchDataRef = React.useRef(fetchData);
+  fetchDataRef.current = fetchData;
+  const routerRef = React.useRef(router);
+  routerRef.current = router;
+
   React.useEffect(() => {
-    if (bootstrappedChatIdRef.current === chatId) {
-      return;
-    }
-    bootstrappedChatIdRef.current = chatId;
+    let cancelled = false;
 
-    const pendingMessage = consumePendingBootstrap(chatId);
+    const load = async () => {
+      setSpaceLoading(true);
+      setLoading(false);
+      setGenFailed(false);
+      const response = await fetchDataRef.current(`/api/chat/${chatId}`);
+      if (cancelled) {
+        return;
+      }
+      if (!response.ok) {
+        routerRef.current.push("/");
+        return;
+      }
 
-    if (pendingMessage) {
+      const data = (await response.json()) as { messages: ClientMessageType[] };
+      if (cancelled) {
+        return;
+      }
+
+      setMessages(data.messages);
       setSpaceLoading(false);
-      void handleSendMessage(pendingMessage);
-      return;
-    }
 
-    void getChatHistory().finally(() => {
-      setSpaceLoading(false);
-    });
-  }, [chatId, consumePendingBootstrap, getChatHistory, handleSendMessage]);
+      if (!shouldAutoGenerate(data.messages)) {
+        return;
+      }
+      if (autoGenerateRef.current === chatId) {
+        return;
+      }
+
+      autoGenerateRef.current = chatId;
+      void generateFromSavedRef.current();
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+      genRequestRef.current += 1;
+    };
+  }, [chatId]);
 
   React.useLayoutEffect(() => {
     const container = messageContainerRef.current;
@@ -432,8 +576,15 @@ export default function ChatPage({ chatId, userInfo }: Props) {
                   <UserBubble
                     messageBody={message.body}
                     imgUrl={userInfo.image}
-                    retry={canRetry && index === messages.length - 2}
-                    retryHandler={handleRetry}
+                    retry={
+                      (canRetry && index === messages.length - 2) ||
+                      (genFailed && index === messages.length - 1)
+                    }
+                    retryHandler={
+                      genFailed && index === messages.length - 1
+                        ? () => void generateFromSaved()
+                        : handleRetry
+                    }
                   />
                 ) : (
                   <AssistantBubble

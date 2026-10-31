@@ -9,7 +9,7 @@ import {
   publicRoutes,
 } from "./lib/routes";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const sessionCookie = getSessionCookie(request);
   const isLoggedIn = !!sessionCookie;
   const isAuthRoute = authRoutes.includes(request.nextUrl.pathname);
@@ -38,6 +38,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  runtime: "nodejs",
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/(api|trpc)(.*)", "/"], // Specify the routes the middleware applies to
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/(api|trpc)(.*)", "/"], // Specify the routes the proxy applies to
 };

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Clock3Icon, PlayIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +12,19 @@ import {
 } from "./constants";
 
 export function HeroDashboard() {
+  const [activeStep, setActiveStep] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    setActiveStep(0);
+    const id = window.setInterval(() => {
+      setActiveStep((current) => ((current ?? 0) + 1) % generationSteps.length);
+    }, 1800);
+
+    return () => window.clearInterval(id);
+  }, []);
+
   return (
     <Card className="group relative overflow-hidden border-border/70 bg-card/80 p-0 shadow-2xl backdrop-blur transition duration-500 hover:-translate-y-1">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/20" />
@@ -42,13 +58,17 @@ export function HeroDashboard() {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {generationSteps.map((step) => {
+          {generationSteps.map((step, index) => {
             const Icon = step.icon;
+            const active = activeStep === index;
 
             return (
               <div
                 key={step.label}
-                className="rounded-2xl border bg-card/70 p-4 transition duration-300 group-hover:border-primary/30"
+                className={cn(
+                  "rounded-2xl border bg-card/70 p-4 transition-[border-color,background-color] duration-300",
+                  active ? "border-primary bg-primary/5" : "border-border",
+                )}
               >
                 <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="size-4" />
@@ -86,22 +106,33 @@ export function HeroDashboard() {
                   <div className="h-2 w-full rounded-full bg-secondary" />
                 </div>
                 <div className="flex h-28 items-end gap-2 rounded-xl border bg-background/70 p-3">
-                  {spectrumBars.map((height) => (
-                    <div
-                      key={height}
-                      className={cn(
-                        "flex-1 rounded-t-md bg-primary/70 transition duration-500 group-hover:bg-primary",
-                        height,
-                      )}
-                    />
-                  ))}
+                  {spectrumBars.map((height, index) => {
+                    const growDelay = 0.45 + index * 0.08;
+
+                    return (
+                      <div
+                        key={height}
+                        className={cn(
+                          "flex-1 origin-bottom animate-spectrum rounded-t-md bg-primary/70 motion-reduce:animate-none",
+                          height,
+                        )}
+                        style={{
+                          animationDelay: `${growDelay}s, ${growDelay + 0.5}s`,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="flex gap-1.5">
+              <div className="@container relative flex gap-1.5">
                 {timelineTracks.map((track) => (
                   <div key={track} className={cn("h-2 rounded-full", track)} />
                 ))}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -inset-y-1 left-0 w-0.5 bg-primary animate-playhead motion-reduce:hidden"
+                />
               </div>
             </div>
           </div>

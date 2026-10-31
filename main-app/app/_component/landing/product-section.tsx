@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { workflowSteps } from "./constants";
+import { cn } from "@/lib/utils";
+import { pressClass, workflowSteps } from "./constants";
+import { Reveal } from "./reveal";
 import { SectionHeader } from "./section-header";
 
 type ProductSectionProps = {
@@ -15,6 +17,7 @@ export function ProductSection({ primaryHref }: ProductSectionProps) {
   return (
     <section id="product" className="px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
       <div className="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center 2xl:max-w-[88rem]">
+        <Reveal>
         <Card className="overflow-hidden border-border/70 bg-card/80 p-0 shadow-xl backdrop-blur">
           <CardContent className="p-4 sm:p-6">
             <div className="rounded-3xl border bg-background/70 p-4">
@@ -60,6 +63,7 @@ export function ProductSection({ primaryHref }: ProductSectionProps) {
             </div>
           </CardContent>
         </Card>
+        </Reveal>
 
         <div>
           <SectionHeader
@@ -74,18 +78,21 @@ export function ProductSection({ primaryHref }: ProductSectionProps) {
               "Structured scene planning",
               "Readable generated code",
               "Render status visibility",
-            ].map((item) => (
-              <div
-                key={item}
-                className="flex items-center gap-3 rounded-2xl border bg-card/60 p-4"
-              >
-                <CheckCircle2Icon className="size-5 text-primary" />
-                <span className="text-sm font-medium">{item}</span>
-              </div>
+            ].map((item, index) => (
+              <Reveal key={item} delay={0.12 + index * 0.06}>
+                <div className="flex items-center gap-3 rounded-2xl border bg-card/60 p-4">
+                  <CheckCircle2Icon className="size-5 text-primary" />
+                  <span className="text-sm font-medium">{item}</span>
+                </div>
+              </Reveal>
             ))}
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg" className="group h-12 rounded-xl">
+            <Button
+              asChild
+              size="lg"
+              className={cn("group h-12 rounded-xl", pressClass)}
+            >
               <Link href={primaryHref}>
                 Try the studio
                 <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />

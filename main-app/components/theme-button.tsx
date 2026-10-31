@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { MoonIcon, SunIcon } from "lucide-react";
 
 import { Toggle } from "@/components/ui/toggle";
@@ -6,13 +7,18 @@ import { useTheme } from "next-themes";
 
 export default function ThemeButton() {
   const { setTheme, theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div>
       <Toggle
         variant="outline"
         className="group data-[state=on]:hover:bg-muted size-9 data-[state=on]:bg-transparent"
-        pressed={theme === "dark"}
+        pressed={mounted && theme === "dark"}
         onPressedChange={() =>
           setTheme((prev) => (prev === "dark" ? "light" : "dark"))
         }

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader, Send } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import { useChatHook } from "@/components/providers/chat-provider";
 import { toast } from "sonner";
 import { useFetch } from "@/hooks/use-fetch";
 
@@ -16,7 +15,6 @@ export default function Client() {
   const [inputText, setInputText] = React.useState("");
   const [isCreating, setIsCreating] = React.useState(false);
   const { data: session } = authClient.useSession();
-  const { setPendingBootstrap } = useChatHook();
   const { fetchData } = useFetch<{ chatId: string }>();
 
   const handleSendMessage = async () => {
@@ -34,6 +32,8 @@ export default function Client() {
     try {
       const response = await fetchData("/api/chat/create", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: inputText }),
       });
 
       if (!response.ok) {
@@ -51,7 +51,6 @@ export default function Client() {
 
       const { chatId } = (await response.json()) as { chatId: string };
 
-      setPendingBootstrap({ chatId, message: inputText });
       router.push(`/chat/${chatId}`);
     } catch (error) {
       console.error("Error creating chat:", error);

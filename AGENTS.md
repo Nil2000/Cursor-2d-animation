@@ -4,7 +4,7 @@ Guidelines for AI agents working on this repository.
 
 ## Repository layout
 
-- **`main-app/`** — Next.js 15 app (UI, API routes, Drizzle ORM, auth). Run package commands from this directory.
+- **`main-app/`** — Next.js 16 app (UI, API routes, Drizzle ORM, auth). Run package commands from this directory.
 - **`processor/`** — Bun service that consumes the Redis queue and runs video/render jobs. Run its scripts from this directory.
 
 There is **no root `package.json`**; always `cd` into the package you are changing before installing or running scripts.
